@@ -1,0 +1,76 @@
+#!/bin/bash
+# --------------------------------------------------------------------------
+# This script installs files and services specific to this project.
+#
+# Author: Bernhard Bablok
+# License: GPL3
+#
+# Website: https://github.com/bablokb/pi-vameter
+#
+# --------------------------------------------------------------------------
+
+PACKAGES="python-spidev python-rrdtool rrdtool"
+PROJECT="pi-vameter"
+
+# --- basic packages   ------------------------------------------------------
+
+check_packages() {
+  local p
+  for p in "$@"; do
+    echo -en "Checking $p ... " >&2
+    dpkg -s "$p" 2>/dev/null | grep -q "Status.*ok" || return 0
+    echo "ok" >&2
+  done
+  return 1
+}
+
+install_packages() {
+  if [ -n "$PACKAGES" ] && check_packages $PACKAGES; then
+    echo -e "[INFO] installing additional packages" 2>&1
+    apt-get update
+    apt-get -y install $PACKAGES
+  fi
+}
+
+# --- install specific files   ----------------------------------------------
+
+install_files() {
+  echo -e "[INFO] installing project files" 2>&1
+
+  for f in `find $(dirname "$0")/../files/ -type f -not -name "*.pyc"`; do
+    target="${f#*files}"
+    target_dir="${target%/*}"
+    [ ! -d "$target_dir" ] && mkdir -p "$target_dir"
+    cp "$f" "$target"
+    chown root:root "$target"
+  done
+
+  chmod 755 "/usr/local/bin/$PROJECT.py"
+}
+
+# --- configure system   ----------------------------------------------------
+
+configure_system() {
+  # update /boot/config.txt
+  if ! grep -q "^dtparam=spi=on" /boot/config.txt ; then
+    echo -e "[INFO] configuring spi in /boot/config.txt" 2>&1
+    echo "dtparam=spi=on" >> /boot/config.txt
+    echo -e "[INFO] please reboot your system" 2>&1
+  fi
+}
+
+# --- activate service   ----------------------------------------------------
+
+enable_services() {
+  echo -e "[INFO] enabeling $PROJECT.service" 2>&1
+  systemctl enable "$PROJECT.service"
+}
+
+# --- main program   --------------------------------------------------------
+
+install_packages
+install_files
+configure_system
+#enable_services
+
+echo "[INFO] installation completed"
