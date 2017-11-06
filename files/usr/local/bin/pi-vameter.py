@@ -92,20 +92,21 @@ def init_spi(simulate):
   if not simulate:
     spi = spidev.SpiDev()
     spi.open(0,0)
+    return spi
 
 # --- read SPI-bus   ---------------------------------------------------------
 
-def read_spi(channel,simulate):
+def read_spi(channel,options):
   """ read a value from the given channel """
 
-  if simulate:
+  if options.simulate:
     now = datetime.datetime.now().strftime("%s")
     if channel == 0:
       return 1 + math.sin(float(now))
     else:
       return 1 + math.cos(float(now))
   else:
-    data = spi.xfer2([1,(8+channel)<<4,0])
+    data = options.spi.xfer2([1,(8+channel)<<4,0])
     return ((data[1]&3) << 8) + data[2]
 
 # --- create database   ------------------------------------------------------
@@ -146,8 +147,8 @@ def create_db(options):
 def convert_data(u_raw,ui_raw):
   """ convert (scale) data """
 
-  u = u_raw*U_RES*U_FAC
-  i = (U_CC/2 - ui_raw)/CONV_VALUE
+  u = max(0.0,u_raw*U_RES*U_FAC)
+  i = max(0.0,(U_CC/2 - ui_raw*U_RES)/CONV_VALUE)
   return (u,i,u*i)
 
 # --- display data   ---------------------------------------------------------
@@ -171,8 +172,8 @@ def collect_data(options):
 
     # read values of voltage and current from ADC
     ts = datetime.datetime.now()
-    u_raw  = read_spi(0,options.simulate)
-    ui_raw = read_spi(1,options.simulate)
+    u_raw  = read_spi(0,options)
+    ui_raw = read_spi(1,options)
     (u,i,p) = convert_data(u_raw,ui_raw)
 
     # show current data
@@ -270,8 +271,8 @@ def get_data(options):
 
   # create and start collector-thread
   options.stop_event  = Event()
+  options.spi = init_spi(options.simulate)
   data_thread = Thread(target=collect_data,args=(options,))
-  init_spi(options.simulate)
   options.logger.msg("[info] starting data-collection")
   data_thread.start()
 
