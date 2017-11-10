@@ -208,9 +208,9 @@ def get_parser():
   parser = ArgumentParser(add_help=False,
     description='Pi VA-meter')
 
-  parser.add_argument('-c', '--create', action='store_true',
-    dest='do_create',
-    help='(re-) create database')
+  parser.add_argument('-n', '--no-create', action='store_true',
+    dest='do_notcreate', default=False,
+    help="don't recreate the database")
   parser.add_argument('-r', '--run', action='store_true',
     dest='do_run',
     help='start measurement (default)')
@@ -249,12 +249,11 @@ def check_options(options):
   # check if we need to create the database
   options.logger.msg("Database-file: %s" % options.dbfile)
   if not os.path.exists(options.dbfile):
-    if options.do_graph or options.do_print:
+    if options.do_graph or options.do_print or options.do_notcreate:
       options.logger.msg("[error] database does not exist")
       sys.exit(3)
-    if not options.do_create:
-      # we can't run without database
-      options.do_create = True
+  elif options.do_graph or options.do_print:
+    options.do_notcreate = True
 
   # without real hardware we just simulate
   options.simulate = options.simulate or not have_spi
@@ -369,7 +368,7 @@ if __name__ == '__main__':
   check_options(options)
 
   # initialize database
-  if options.do_create:
+  if not options.do_notcreate:
     create_db(options)
 
   # collect data
