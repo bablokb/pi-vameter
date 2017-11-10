@@ -1,0 +1,20 @@
+#!/bin/bash
+# ----------------------------------------------------------------------------
+# Measure voltage and curent using a Hall-sensor and an ADC.
+#
+# This is a simple script which acts as a start/stop toggle
+#
+# Author: Bernhard Bablok, Lothar Hiller
+# License: GPL3
+#
+# Website: https://github.com/bablokb/pi-vameter
+#
+# ----------------------------------------------------------------------------
+
+if ps -C "pi-vameter.py" > /dev/null; then
+  # program is running, stop it
+  killall "pi-vameter.py"
+else
+  # program is not running, start it in the background
+  pi-vameter.py "$@" &
+fi
