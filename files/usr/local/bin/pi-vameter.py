@@ -33,14 +33,21 @@ KEEP_MIN      = 24          # number of hours to keep minute-data
 KEEP_HOUR     = 1           # number of month to keep hour-data
 KEEP_DAY      = 12          # number of month to keep day-data
 
+U_MAX         = 12.0        # max voltage
 A_MAX         = 5.0         # max current
 U_REF         = 3.3
 U_FAC         = 5.0/3.0     # this depends on the measurement-circuit
 U_RES         = U_REF/1024  # MCP3008 has 10-bit resolution
 
+I_SCALE       = 1000        # scale A to mA
+
+#ADC_BYTES     = [[1,128,0],[0,144,0]]    # MCP3008
+ADC_BYTES     = [[0,104,0],[0,120,0]]    # MCP3002
+#ADC_BYTES     = [[0,160,0],[0,224,0]]    # MCP3202
+
 # Hall sensor
 U_CC       =   5.0    # Volt
-CONV_VALUE = 185.0    # mV/A      converter value
+CONV_VALUE =   0.185  # V/A      converter value
 
 # --- helper class for options   --------------------------------------------
 
@@ -106,7 +113,7 @@ def read_spi(channel,options):
     else:
       return 1 + math.cos(float(now))
   else:
-    data = options.spi.xfer2([1,(8+channel)<<4,0])
+    data = options.spi.xfer(ADC_BYTES[channel])
     return ((data[1]&3) << 8) + data[2]
 
 # --- create database   ------------------------------------------------------
@@ -120,9 +127,9 @@ def create_db(options):
     options.dbfile,
     "--start", "now",
     "--step", str(INTERVAL),
-    "DS:U:GAUGE:%d:0:%f" % (INTERVAL,U_REF*U_FAC),        # voltage
-    "DS:I:GAUGE:%d:0:%f" % (INTERVAL,A_MAX),              # current
-    "DS:P:GAUGE:%d:0:%f" % (INTERVAL,A_MAX*U_REF*U_FAC),  # power
+    "DS:U:GAUGE:%d:0:%f" % (2*INTERVAL,U_MAX),              # voltage
+    "DS:I:GAUGE:%d:0:%f" % (2*INTERVAL,A_MAX),              # current
+    "DS:P:GAUGE:%d:0:%f" % (2*INTERVAL,U_MAX*A_MAX),        # power
 
     "RRA:AVERAGE:0.5:1s:%dh" % KEEP_SEC,
     "RRA:AVERAGE:0.5:1m:%dh" % KEEP_MIN,
@@ -156,7 +163,8 @@ def convert_data(u_raw,ui_raw):
 def display_data(options,ts,u,i,p):
   """ display current data """
 
-  options.logger.msg("%s: %fV, %fA, %fW" % (ts.strftime(TIMESTAMP_FMT+".%f"),u,i,p))
+  options.logger.msg("%s: %fV, %fmA, %fW" % (ts.strftime(TIMESTAMP_FMT+".%f"),
+                                             u,I_SCALE*i,p))
 
 # --- collect data   ---------------------------------------------------------
 
@@ -214,9 +222,10 @@ def get_parser():
   parser.add_argument('-r', '--run', action='store_true',
     dest='do_run',
     help='start measurement (default)')
-  parser.add_argument('-g', '--graph', action='store_true',
+  parser.add_argument('-g', '--graph', nargs='?',
+    metavar='graph_opt', default=None, const="UIP",
     dest='do_graph',
-    help='create graphic from data')
+    help='create graphic from data for U,I,P (use any combination)')
   parser.add_argument('-p', '--print', action='store_true',
     dest='do_print',
     help='print results')
@@ -320,44 +329,52 @@ def print_data(options):
 def graph_data(options):
   """ create graphical representation of data """
 
-  imgfile = os.path.splitext(options.dbfile)[0] + ".png"
-  options.logger.msg("[info] creating image-file: %s" % imgfile)
-
   # fetch data (to find first true data-point)
   _, data = fetch_data(options)
   first = data[0][0]  - 5
   last  = data[-1][0] + 5
-  args = ["rrdtool", "graph", imgfile,
+
+  for graph_type in options.do_graph:
+    imgfile = os.path.splitext(options.dbfile)[0] + "-%s.png" % graph_type
+    options.logger.msg("[info] creating image-file: %s" % imgfile)
+
+    gdef     = "DEF:%s=%s:%s:AVERAGE" %  (graph_type,options.dbfile,graph_type)
+    vdef_avg = "VDEF:%savg=%s,AVERAGE" % (graph_type,graph_type)
+    vdef_max = "VDEF:%smax=%s,MAXIMUM" % (graph_type,graph_type)
+    if graph_type == 'U':
+      vlabel   = "U (V)"
+      line     = "LINE2:%s#0000FF:%savg" % (graph_type,graph_type)
+      info_avg = "GPRINT:Uavg:U Avg \t%6.2lf V"
+      info_max = "GPRINT:Umax:U Max \t%6.2lf V\c"
+    elif graph_type == 'I':
+      vlabel   = "I (A)"
+      line     = "LINE2:%s#00FF00:%savg" % (graph_type,graph_type)
+      info_avg = "GPRINT:Iavg:I Avg \t%6.3lf A"
+      info_max = "GPRINT:Imax:I Max \t%6.3lf A\c"
+    else:
+      vlabel   = "P (W)"
+      line     = "LINE2:%s#FF0000:%savg" % (graph_type,graph_type)
+      info_avg = "GPRINT:Pavg:P Avg \t%6.2lf W"
+      info_max = "GPRINT:Pmax:P Max \t%6.2lf W\c"
+
+    args = ["rrdtool", "graph", imgfile,
                 "--start", str(first),
                 "--end",   str(last),
-                "--vertical-label=U/I/P",
+                "--vertical-label=%s" % vlabel,
                 "--width", "800",
                 "--height", "600",
                 "--title", "Pi-VA-Meter",
-                "--left-axis-format", "%6.4lf",
+                "--left-axis-format", "%6.2lf",
                 "--units-exponent", "0",
-                "DEF:U=%s:U:AVERAGE" % options.dbfile,
-                "DEF:I=%s:I:AVERAGE" % options.dbfile,
-                "DEF:P=%s:P:AVERAGE" % options.dbfile,
-                "VDEF:Uavg=U,AVERAGE",
-                "VDEF:Iavg=I,AVERAGE",
-                "VDEF:Pavg=P,AVERAGE",
-                "VDEF:Umax=U,MAXIMUM",
-                "VDEF:Imax=I,MAXIMUM",
-                "VDEF:Pmax=P,MAXIMUM",
-                "LINE2:U#0000FF:Uavg",
-                "LINE2:I#00FF00:Iavg",
-                "LINE2:P#FF0000:Pavg",
-
+                gdef,
+                vdef_avg,
+                vdef_max,
+                line,
                 "COMMENT:\s",
-                "GPRINT:Uavg:U Avg \t%6.4lf V",
-                "GPRINT:Umax:U Max \t%6.4lf V\c",
-                "GPRINT:Iavg:I Avg \t%6.4lf V",
-                "GPRINT:Imax:I Max \t%6.4lf V\c",
-                "GPRINT:Pavg:P Avg \t%6.4lf V",
-                "GPRINT:Pmax:P Max \t%6.4lf V\c"]
+                info_avg,
+                info_max]
 
-  rrdtool.graph(imgfile,args[3:])
+    rrdtool.graph(imgfile,args[3:])
   
 # --- main program   ---------------------------------------------------------
 
