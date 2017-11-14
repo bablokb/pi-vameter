@@ -37,6 +37,13 @@ install_packages() {
 install_files() {
   echo -e "[INFO] installing project files" 2>&1
 
+  # save existing gpio-poll.conf
+  rand="$RANDOM"
+  if [ -f "/etc/gpio-poll.conf" ]; then
+    # save current configuration
+    mv "/etc/gpio-poll.conf" "/etc/gpio-poll.conf.$rand"
+  fi
+
   for f in `find $(dirname "$0")/../files/ -type f -not -name "*.pyc"`; do
     target="${f#*files}"
     target_dir="${target%/*}"
@@ -46,6 +53,16 @@ install_files() {
   done
 
   chmod 755 "/usr/local/bin/$PROJECT.py"
+  chmod 755 "/usr/local/bin/vameterctl"
+  chmod 644 "/etc/gpio-poll.conf"
+
+  # restore old configuration
+  if [ -f "/etc/gpio-poll.conf.$rand" ]; then
+    mv -f "/etc/gpio-poll.conf" "/etc/gpio-poll.conf.new"
+    mv "/etc/gpio-poll.conf.$rand" "/etc/gpio-poll.conf"
+    echo -e "[INFO] new version of configuration file saved to: /etc/gpio-poll.conf.new" 2>&1
+  fi
+
 }
 
 # --- configure system   ----------------------------------------------------
