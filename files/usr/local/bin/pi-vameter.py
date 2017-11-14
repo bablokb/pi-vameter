@@ -182,7 +182,10 @@ def collect_data(options):
     ts = datetime.datetime.now()
     u_raw  = read_spi(0,options)
     ui_raw = read_spi(1,options)
-    (u,i,p) = convert_data(u_raw,ui_raw)
+    if options.raw:
+      (u,i,p) = (u_raw,ui_raw,u_raw*ui_raw)
+    else:
+      (u,i,p) = convert_data(u_raw,ui_raw)
 
     # show current data
     display_data(options,ts,u,i,p)
@@ -229,6 +232,10 @@ def get_parser():
   parser.add_argument('-p', '--print', action='store_true',
     dest='do_print',
     help='print results')
+
+  parser.add_argument('-R', '--raw', metavar='raw-mode',
+    dest='raw', default=False,
+    help='record raw ADC-values')
 
   parser.add_argument('-d', '--debug', metavar='debug-mode',
     dest='debug', default=False,
