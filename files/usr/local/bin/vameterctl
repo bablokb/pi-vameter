@@ -2,7 +2,8 @@
 # ----------------------------------------------------------------------------
 # Measure voltage and curent using a Hall-sensor and an ADC.
 #
-# This is a simple script which acts as a start/stop toggle
+# This is a simple script which acts as a start/stop toggle. It is started
+# from the gpio-poll-service.
 #
 # Author: Bernhard Bablok, Lothar Hiller
 # License: GPL3
@@ -11,10 +12,60 @@
 #
 # ----------------------------------------------------------------------------
 
-if ps -C "pi-vameter.py" > /dev/null; then
+VAMETER_USER="vameter"
+PIN_BLINK="18" # if empty, ignore blinking
+
+# First argument is GPIO pin number, second argument is value,
+# third is switch-time and fourth is repeat-time
+# For this application we only need the value
+pinnr="$1"
+value="$2"
+
+# --- helper-function (start/stop blinking)   ------------------------------
+
+setup_blink() {
+  [ -z "$PIN_BLINK" ] && return
+  if [ ! -d /sys/class/gpio/gpio$PIN_BLINK ]; then
+    echo "$PIN_BLINK" > /sys/class/gpio/export
+    echo "out"  > /sys/class/gpio/gpio$PIN_BLINK/direction
+  fi
+  BLINK_PATH="/sys/class/gpio/gpio$PIN_BLINK/value"
+  BLINK_STATE="/var/run/vameterctl.state"
+}
+
+stop_blink() {
+  [ -z "$PIN_BLINK" ] && return
+  rm "$BLINK_STATE"
+  sleep 1.5
+  echo "0" > "$BLINK_PATH"
+}
+
+start_blink() {
+  [ -z "$PIN_BLINK" ] && return
+  touch "$BLINK_STATE"
+  while [ -f "$BLINK_STATE" ]; do
+    echo "1" > "$BLINK_PATH"
+    sleep 0.5
+    echo "0" > "$BLINK_PATH"
+    sleep 0.5
+  done
+}
+
+# --- main program   -------------------------------------------------------
+
+# sanity check
+[ "$value" -ne 1 ] && return
+
+setup_blink
+
+# check state and start/stop measurement
+
+if [ -f "$BLINK_STATE" ]; then
   # program is running, stop it
   killall "pi-vameter.py"
+  stop_blink
 else
   # program is not running, start it in the background
-  pi-vameter.py "$@" &
+  su - "$VAMETER_USER" pi-vameter.py -g UIP -r &
+  start_blink
 fi
