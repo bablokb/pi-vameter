@@ -74,6 +74,17 @@ configure_system() {
     echo "dtparam=spi=on" >> /boot/config.txt
     echo -e "[INFO] please reboot your system" 2>&1
   fi
+
+  # create user
+  if ! grep -q "vameter" /etc/passwd; then
+    echo -e "[INFO] create system-user vameter:vameter" 2>&1
+    groupadd -r vameter
+    adduser --disabled-login --gecos "" --system --group \
+                                        --home /var/lib/vameter vameter
+    usermod -a -G gpio,i2c,spi vameter
+  fi
+  mkdir -p /var/lib/vameter/data
+  chown -R vameter:vameter /var/lib/vameter
 }
 
 # --- activate service   ----------------------------------------------------
