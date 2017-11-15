@@ -111,7 +111,7 @@ def read_spi(channel,options):
     if channel == 0:
       return 1 + math.sin(float(now))
     else:
-      return 1 + math.cos(float(now))
+      return (1 + math.cos(float(now)))/1000.0
   else:
     data = options.spi.xfer(ADC_BYTES[channel])
     return ((data[1]&3) << 8) + data[2]
@@ -211,14 +211,13 @@ def signal_handler(_signo, _stack_frame):
 def get_parser():
   """ configure cmdline-parser """
 
-  # default database
-  now    = datetime.datetime.now()
-  fname  = now.strftime("%Y%m%d_%H%M%S.rrd")
-  dbfile = os.path.join(os.path.expanduser("~"),fname)
-  
   parser = ArgumentParser(add_help=False,
     description='Pi VA-meter')
 
+  parser.add_argument('-D', '--dir', nargs=1,
+    metavar='directory', default=os.path.expanduser("~"),
+    dest='target_dir',
+    help='directory for RRDs and graphics if no database-name is supplied')
   parser.add_argument('-n', '--no-create', action='store_true',
     dest='do_notcreate', default=False,
     help="don't recreate the database")
@@ -233,7 +232,7 @@ def get_parser():
     dest='do_print',
     help='print results')
 
-  parser.add_argument('-R', '--raw', metavar='raw-mode',
+  parser.add_argument('-R', '--raw', action='store_true',
     dest='raw', default=False,
     help='record raw ADC-values')
 
@@ -246,8 +245,8 @@ def get_parser():
   parser.add_argument('-h', '--help', action='help',
     help='print this help')
 
-  parser.add_argument('dbfile', nargs='?', metavar='dbfile',
-    default=dbfile, help='RRD database-file')
+  parser.add_argument('dbfile', nargs='?', metavar='database-file',
+    default=None, help='RRD database-file')
   return parser
 
 # --- validate and fix options   ---------------------------------------------
@@ -258,18 +257,28 @@ def check_options(options):
   # add logger
   options.logger   = Msg(options.debug)
 
+  # default database
+  if not options.dbfile:
+    now            = datetime.datetime.now()
+    fname          = now.strftime("%Y%m%d_%H%M%S.rrd")
+    options.dbfile = os.path.join(options.target_dir,fname)
+  options.logger.msg("[info] Database-file: %s" % options.dbfile)
+
   # set run-mode as default
   if not options.do_graph and not options.do_print:
     options.do_run = True
-  
+
+  # do not recreate the database if no new run is requested
+  if os.path.exists(options.dbfile) and not options.do_run:
+    options.do_notcreate = True
+
   # check if we need to create the database
-  options.logger.msg("Database-file: %s" % options.dbfile)
-  if not os.path.exists(options.dbfile):
-    if options.do_graph or options.do_print or options.do_notcreate:
+  if not os.path.exists(options.dbfile) and options.do_notcreate:
       options.logger.msg("[error] database does not exist")
       sys.exit(3)
-  elif options.do_graph or options.do_print:
-    options.do_notcreate = True
+  if not os.path.exists(options.dbfile) and not options.do_run:
+      options.logger.msg("[error] database does not exist")
+      sys.exit(3)
 
   # without real hardware we just simulate
   options.simulate = options.simulate or not have_spi
@@ -324,12 +333,15 @@ def print_data(options):
   title, result = fetch_data(options)
 
   # print data
-  for ts,v in result:
+  for ts,(u,i,p) in result:
     ts = datetime.datetime.fromtimestamp(ts).strftime(TIMESTAMP_FMT)
+    u = 0 if not u else u
+    i = 0 if not i else i
+    p = 0 if not p else p
     print("%s: %s=%6.4fV, %s=%6.4fA, %s=%6.4fW" % (ts,
-                                              title[0],v[0],
-                                              title[1],v[1],
-                                              title[2],v[2]))
+                                              title[0],u,
+                                              title[1],i,
+                                              title[2],p))
 
 # --- graph data   -----------------------------------------------------------
 
