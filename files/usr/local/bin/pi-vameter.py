@@ -338,10 +338,12 @@ def print_data(options):
     u = 0 if not u else u
     i = 0 if not i else i
     p = 0 if not p else p
-    print("%s: %s=%6.4fV, %s=%6.4fA, %s=%6.4fW" % (ts,
-                                              title[0],u,
-                                              title[1],i,
-                                              title[2],p))
+    if I_SCALE == 1000:
+      # we display mA
+      format = "%s: %s=%6.4fV, %s=%6.0fmA, %s=%6.4fW"
+    else:
+      format = "%s: %s=%6.4fV, %s=%6.3fA, %s=%6.4fW"
+    print(format % (ts, title[0],u, title[1],I_SCALE*i, title[2],p))
 
 # --- graph data   -----------------------------------------------------------
 
