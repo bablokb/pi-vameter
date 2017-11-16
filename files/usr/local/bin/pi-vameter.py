@@ -128,7 +128,7 @@ def create_db(options):
     "--start", "now",
     "--step", str(INTERVAL),
     "DS:U:GAUGE:%d:0:%f" % (2*INTERVAL,U_MAX),              # voltage
-    "DS:I:GAUGE:%d:0:%f" % (2*INTERVAL,A_MAX),              # current
+    "DS:I:GAUGE:%d:0:%f" % (2*INTERVAL,I_SCALE*A_MAX),      # current
     "DS:P:GAUGE:%d:0:%f" % (2*INTERVAL,U_MAX*A_MAX),        # power
 
     "RRA:AVERAGE:0.5:1s:%dh" % KEEP_SEC,
@@ -155,8 +155,8 @@ def convert_data(u_raw,ui_raw):
   """ convert (scale) data """
 
   u = max(0.0,u_raw*U_RES*U_FAC)
-  i = max(0.0,(U_CC/2 - ui_raw*U_RES)/CONV_VALUE)
-  return (u,i,u*i)
+  i = max(0.0,(U_CC/2 - ui_raw*U_RES)/CONV_VALUE)*I_SCALE
+  return (u,i,u*i/I_SCALE)
 
 # --- display data   ---------------------------------------------------------
 
@@ -164,7 +164,7 @@ def display_data(options,ts,u,i,p):
   """ display current data """
 
   options.logger.msg("%s: %fV, %fmA, %fW" % (ts.strftime(TIMESTAMP_FMT+".%f"),
-                                             u,I_SCALE*i,p))
+                                             u,i,p))
 
 # --- collect data   ---------------------------------------------------------
 
@@ -340,10 +340,10 @@ def print_data(options):
     p = 0 if not p else p
     if I_SCALE == 1000:
       # we display mA
-      format = "%s: %s=%6.4fV, %s=%6.0fmA, %s=%6.4fW"
+      format = "%s: %s=%4.2fV, %s=%4.0fmA, %s=%4.2fW"
     else:
       format = "%s: %s=%6.4fV, %s=%6.3fA, %s=%6.4fW"
-    print(format % (ts, title[0],u, title[1],I_SCALE*i, title[2],p))
+    print(format % (ts, title[0],u, title[1],i, title[2],p))
 
 # --- graph data   -----------------------------------------------------------
 
@@ -368,10 +368,15 @@ def graph_data(options):
       info_avg = "GPRINT:Uavg:U Avg \t%6.2lf V"
       info_max = "GPRINT:Umax:U Max \t%6.2lf V\c"
     elif graph_type == 'I':
-      vlabel   = "I (A)"
+      if I_SCALE == 1:
+        vlabel   = "I (A)"
+        info_avg = "GPRINT:Iavg:I Avg \t%6.3lf A"
+        info_max = "GPRINT:Imax:I Max \t%6.3lf A\c"
+      else:
+        vlabel   = "I (mA)"
+        info_avg = "GPRINT:Iavg:I Avg \t%6.0lf mA"
+        info_max = "GPRINT:Imax:I Max \t%6.0lf mA\c"
       line     = "LINE2:%s#00FF00:%savg" % (graph_type,graph_type)
-      info_avg = "GPRINT:Iavg:I Avg \t%6.3lf A"
-      info_max = "GPRINT:Imax:I Max \t%6.3lf A\c"
     else:
       vlabel   = "P (W)"
       line     = "LINE2:%s#FF0000:%savg" % (graph_type,graph_type)
