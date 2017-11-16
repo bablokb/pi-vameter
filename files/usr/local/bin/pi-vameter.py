@@ -383,7 +383,7 @@ def graph_data(options):
                 "--end",   str(last),
                 "--vertical-label=%s" % vlabel,
                 "--width", "800",
-                "--height", "600",
+                "--height", "400",
                 "--title", "Pi-VA-Meter",
                 "--left-axis-format", "%6.2lf",
                 "--units-exponent", "0",
