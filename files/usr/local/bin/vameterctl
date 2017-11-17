@@ -13,7 +13,8 @@
 # ----------------------------------------------------------------------------
 
 VAMETER_USER="vameter"
-PIN_BLINK="18" # if empty, ignore blinking
+PIN_GPIO="23"    # control pin
+PIN_BLINK="18"   # if empty, ignore blinking
 
 # First argument is GPIO pin number, second argument is value,
 # third is switch-time and fourth is repeat-time
@@ -54,7 +55,7 @@ start_blink() {
 # --- main program   -------------------------------------------------------
 
 # sanity check
-[ "$value" -ne 1 ] && return
+[ "$pin" != "$PIN_GPIO" -o "$value" -ne 1 ] && exit 3
 
 setup_blink
 
@@ -66,6 +67,6 @@ if [ -f "$BLINK_STATE" ]; then
   stop_blink
 else
   # program is not running, start it in the background
-  su - "$VAMETER_USER" pi-vameter.py -D /var/lib/vameter/data -g UIP -r &
-  start_blink
+  su - "$VAMETER_USER" -c "pi-vameter.py -D /var/lib/vameter/data -g UIP -r" &
+  start_blink &
 fi
