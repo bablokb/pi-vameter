@@ -18,7 +18,7 @@ except:
   pass
 
 import os, sys, signal, signal, time, datetime
-import subprocess
+import subprocess, syslog
 from argparse import ArgumentParser
 from threading import Thread, Event, Lock
 
@@ -215,7 +215,7 @@ def get_parser():
     description='Pi VA-meter')
 
   parser.add_argument('-D', '--dir', nargs=1,
-    metavar='directory', default=os.path.expanduser("~"),
+    metavar='directory', default=[os.path.expanduser("~")],
     dest='target_dir',
     help='directory for RRDs and graphics if no database-name is supplied')
   parser.add_argument('-n', '--no-create', action='store_true',
@@ -261,7 +261,7 @@ def check_options(options):
   if not options.dbfile:
     now            = datetime.datetime.now()
     fname          = now.strftime("%Y%m%d_%H%M%S.rrd")
-    options.dbfile = os.path.join(options.target_dir,fname)
+    options.dbfile = os.path.join(options.target_dir[0],fname)
   options.logger.msg("[info] Database-file: %s" % options.dbfile)
 
   # set run-mode as default
