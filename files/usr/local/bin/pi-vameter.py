@@ -362,11 +362,15 @@ def graph_data(options):
     gdef     = "DEF:%s=%s:%s:AVERAGE" %  (graph_type,options.dbfile,graph_type)
     vdef_avg = "VDEF:%savg=%s,AVERAGE" % (graph_type,graph_type)
     vdef_max = "VDEF:%smax=%s,MAXIMUM" % (graph_type,graph_type)
+    vlow     = None
+    vhigh    = None
     if graph_type == 'U':
       vlabel   = "U (V)"
       line     = "LINE2:%s#0000FF:%savg" % (graph_type,graph_type)
       info_avg = "GPRINT:Uavg:U Avg \t%6.2lf V"
       info_max = "GPRINT:Umax:U Max \t%6.2lf V\c"
+      vlow     = "0.0"
+      vhigh    = "6.0"
     elif graph_type == 'I':
       if I_SCALE == 1:
         vlabel   = "I (A)"
@@ -399,6 +403,10 @@ def graph_data(options):
                 "COMMENT:\s",
                 info_avg,
                 info_max]
+    if not vlow is None:
+      args.extend(["--lower-limit",vlow])
+    if not vhigh is None:
+      args.extend(["--upper-limit",vhigh])
 
     rrdtool.graph(imgfile,args[3:])
   
