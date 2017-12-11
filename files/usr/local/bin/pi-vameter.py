@@ -122,7 +122,7 @@ def read_spi(channel,options):
       return (5 + 0.5*math.sin(float(now)))/(U_RES*U_FAC)
     else:
       i = 0.5 + 0.5*math.cos(float(now))
-      return (U_CC/2 - i*CONV_VALUE/I_SCALE)/U_RES
+      return (U_CC/2 - i*CONV_VALUE)/U_RES
   else:
     data = options.spi.xfer(ADC_BYTES[channel])
     return ((data[1]&3) << 8) + data[2]
@@ -188,16 +188,17 @@ def display_data(options,ts,u,i,p):
 
   LINE0 = "--------------------"
   LINE1 = "   I(mA)  U(V)  P(W)"
-  LINE2 = "akt {0:4d}  {1:4.2f} {2:4.2f}"
-  LINE3 = "max {0:5d}  {1:4.2f} {2:4.1f}"
-  LINE4 = "total        {0:4.2f}  Wh"
+  LINE2 = "akt {0:4d}  {1:4.2f}  {2:4.2f}"
+  LINE3 = "max{0:5d}  {1:4.2f}  {2:4.1f}"
+  LINE4 = "total        {0:4.2f} Wh"
 
+  #  have_term = False
   if have_term:
     print("\033c")
     print(LINE0.format())
     print(LINE1.format())
-    print(LINE2.format(int(1000*i),u,p))
-    print(LINE3.format(int(1000*i_max),u_max,p_max))
+    print(LINE2.format(int(i),u,p))
+    print(LINE3.format(int(i_max),u_max,p_max))
     print(LINE4.format(p_sum/3600.0))
     print(LINE0.format())
   else:
