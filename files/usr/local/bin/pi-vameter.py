@@ -165,16 +165,17 @@ def create_db(options):
 def convert_data(u_raw,ui_raw):
   """ convert (scale) data """
 
-  global u_max, i_max, p_max, p_sum
+  global secs, u_max, i_max, p_max, p_sum
 
+  secs += 1
   u = max(0.0,u_raw*U_RES*U_FAC)
   i = max(0.0,(U_CC/2 - ui_raw*U_RES)/CONV_VALUE)*I_SCALE
   p = u*i/I_SCALE
 
-  u_max = max(u_max,u)
-  i_max = max(i_max,i)
-  p_max = max(p_max,p)
-  p_sum = p_sum + p         # unit is Ws
+  u_max  = max(u_max,u)
+  i_max  = max(i_max,i)
+  p_max  = max(p_max,p)
+  p_sum += p             # N.B: unit is Ws
 
   return (u,i,p)
 
@@ -186,20 +187,19 @@ def display_data(options,ts,u,i,p):
   global have_term, have_disp
   global u_max, i_max, p_max, p_sum
 
-  LINE0 = "--------------------"
-  LINE1 = "   I(mA)  U(V)  P(W)"
-  LINE2 = "akt {0:4d}  {1:4.2f}  {2:4.2f}"
-  LINE3 = "max{0:5d}  {1:4.2f}  {2:4.1f}"
-  LINE4 = "total        {0:4.2f} Wh"
+  LINE0 = "----------------------"
+  LINE1 = "|   I(mA)  U(V)  P(W)|"
+  LINE2 = "|now {0:4d}  {1:4.2f}  {2:4.2f}|"
+  LINE3 = "|max{0:5d}  {1:4.2f}  {2:4.1f}|"
+  LINE4 = "|tot{0:5d}s    {1:4.2f} Wh|"
 
-  #  have_term = False
   if have_term:
     print("\033c")
     print(LINE0.format())
     print(LINE1.format())
     print(LINE2.format(int(i),u,p))
     print(LINE3.format(int(i_max),u_max,p_max))
-    print(LINE4.format(p_sum/3600.0))
+    print(LINE4.format(secs,p_sum/3600.0))
     print(LINE0.format())
   else:
     options.logger.msg("%s: %fV, %fmA, %fW" % (ts.strftime(TIMESTAMP_FMT+".%f"),
@@ -213,7 +213,8 @@ def collect_data(options):
   """ collect data in an endless loop """
 
   # glocal accumulators
-  global u_max, i_max, p_max, p_sum
+  global secs, u_max, i_max, p_max, p_sum
+  secs  = 0
   u_max = 0.0
   i_max = 0.0
   p_max = 0.0
