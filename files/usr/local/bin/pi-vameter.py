@@ -91,6 +91,16 @@ class Msg(object):
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
 
+# --- query output options   -------------------------------------------------
+
+def query_output_opts():
+  """ query output options """
+
+  global have_term, have_disp
+  have_term = os.getpgrp() == os.tcgetpgrp(sys.stdout.fileno())
+  #TODO: query i2c for LCD-display
+  have_disp = False
+
 # --- initialize SPI-bus   ---------------------------------------------------
 
 def init_spi(simulate):
@@ -154,22 +164,58 @@ def create_db(options):
 def convert_data(u_raw,ui_raw):
   """ convert (scale) data """
 
+  global u_max, i_max, p_max, p_sum
+
   u = max(0.0,u_raw*U_RES*U_FAC)
   i = max(0.0,(U_CC/2 - ui_raw*U_RES)/CONV_VALUE)*I_SCALE
-  return (u,i,u*i/I_SCALE)
+  p = u*i/I_SCALE
+
+  u_max = max(u_max,u)
+  i_max = max(i_max,i)
+  p_max = max(p_max,p)
+  p_sum = p_sum + p         # unit is Ws
+
+  return (u,i,p)
 
 # --- display data   ---------------------------------------------------------
 
 def display_data(options,ts,u,i,p):
   """ display current data """
 
-  options.logger.msg("%s: %fV, %fmA, %fW" % (ts.strftime(TIMESTAMP_FMT+".%f"),
+  global have_term, have_disp
+  global u_max, i_max, p_max, p_sum
+
+  LINE0 = "--------------------"
+  LINE1 = "   I(mA)  U(V)  P(W)"
+  LINE2 = "akt {0:4d}  {1:4.2f} {2:4.2f}"
+  LINE3 = "max {0:5d}  {1:4.2f} {2:4.1f}"
+  LINE4 = "total        {0:4.2f}  Wh"
+
+  if have_term:
+    print("\033c")
+    print(LINE0.format())
+    print(LINE1.format())
+    print(LINE2.format(int(1000*i),u,p))
+    print(LINE3.format(int(1000*i_max),u_max,p_max))
+    print(LINE4.format(p_sum/3600.0))
+    print(LINE0.format())
+  else:
+    options.logger.msg("%s: %fV, %fmA, %fW" % (ts.strftime(TIMESTAMP_FMT+".%f"),
                                              u,i,p))
+  if have_disp:
+    pass
 
 # --- collect data   ---------------------------------------------------------
 
 def collect_data(options):
   """ collect data in an endless loop """
+
+  # glocal accumulators
+  global u_max, i_max, p_max, p_sum
+  u_max = 0.0
+  i_max = 0.0
+  p_max = 0.0
+  p_sum = 0.0
 
   # start at (near) full second
   ms       = datetime.datetime.now().microsecond
@@ -417,6 +463,9 @@ if __name__ == '__main__':
   opt_parser = get_parser()
   options    = opt_parser.parse_args(namespace=Options)
   check_options(options)
+
+  # query output options
+  query_output_opts()
 
   # initialize database
   if not options.do_notcreate:
