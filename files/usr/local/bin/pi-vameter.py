@@ -119,9 +119,10 @@ def read_spi(channel,options):
   if options.simulate:
     now = datetime.datetime.now().strftime("%s")
     if channel == 0:
-      return 1 + math.sin(float(now))
+      return (5 + 0.5*math.sin(float(now)))/(U_RES*U_FAC)
     else:
-      return (1 + math.cos(float(now)))/1000.0
+      i = 0.5 + 0.5*math.cos(float(now))
+      return (U_CC/2 - i*CONV_VALUE/I_SCALE)/U_RES
   else:
     data = options.spi.xfer(ADC_BYTES[channel])
     return ((data[1]&3) << 8) + data[2]
