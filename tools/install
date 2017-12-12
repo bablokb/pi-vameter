@@ -83,7 +83,6 @@ configure_system() {
                                         --home /var/lib/vameter vameter
     usermod -a -G gpio,i2c,spi vameter
   fi
-  mkdir -p /var/lib/vameter/data
   chown -R vameter:vameter /var/lib/vameter
 }
 
