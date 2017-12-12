@@ -1,0 +1,57 @@
+<!doctype html>
+<!--
+# ----------------------------------------------------------------------------
+# Simple web-interface for the results of pi-vameter.py 
+#
+# This file defines the single page application.
+#
+# Author: Bernhard Bablok
+# License: GPL3
+#
+# Website: https://github.com/bablokb/pi-vameter
+#
+# ----------------------------------------------------------------------------
+-->
+
+<html lang="de">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Pi-VAMeter">
+
+    <title>Pi VA-Meter</title>
+
+    <!-- layout and styling thanks to purecss.io -->
+    <link rel="stylesheet" href="css/w3.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" type="text/css" href="css/datatables.min.css"/>
+    <link rel="stylesheet" type="text/css" href="css/jquery.qtip.min.css"/>
+
+     <!-- jquery and special functions -->
+     <script src="js/jquery-min.js"></script>
+     <script src="js/utils.js"></script>
+     <script type="text/javascript" src="js/datatables.min.js"></script>
+     <script type="text/javascript" src="js/jquery.qtip.min.js"></script>
+
+  </head>
+
+  <body">
+    <div id="layout">
+      %include('menu.tpl')
+    </div>
+
+    <div id="main">
+        <div">
+            <h1>Pi VA-Meter</h1>
+        </div>
+
+        <!--Message area (content via handler) -->
+        <p><span id="msgarea"></span></p>
+
+        %include('content_data.tpl')
+        %include('content_graphics.tpl')
+
+    </div>
+	    
+</body>
+</html>
