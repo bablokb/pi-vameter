@@ -93,13 +93,21 @@ class Msg(object):
 
 # --- query output options   -------------------------------------------------
 
-def query_output_opts():
+def query_output_opts(options):
   """ query output options """
 
-  global have_term, have_disp
-  have_term = os.getpgrp() == os.tcgetpgrp(sys.stdout.fileno())
-  #TODO: query i2c for LCD-display
-  have_disp = False
+  if options.out_opt == "auto":
+    have_term = os.getpgrp() == os.tcgetpgrp(sys.stdout.fileno())
+    #TODO: query i2c for LCD-display
+    have_disp = False
+    if have_term and have_disp:
+      options.out_opt = "both"
+    elif have_term:
+      options.out_opt = "term"
+    elif have_disp:
+      options.out_opt = "44780"
+    else:
+      options.out_opt = "log"
 
 # --- initialize SPI-bus   ---------------------------------------------------
 
@@ -184,27 +192,30 @@ def convert_data(u_raw,ui_raw):
 def display_data(options,ts,u,i,p):
   """ display current data """
 
-  global have_term, have_disp
   global u_max, i_max, p_max, p_sum
+
+  if options.out_opt == "none":
+    return
+  elif options.out_opt == "log":
+    options.logger.msg("%s: %fV, %fmA, %fW" % (ts.strftime(TIMESTAMP_FMT+".%f"),
+                                             u,i,p))
+    return
 
   LINE0 = "----------------------"
   LINE1 = "|   I(mA)  U(V)  P(W)|"
-  LINE2 = "|now {0:4d}  {1:4.2f}  {2:4.2f}|"
-  LINE3 = "|max{0:5d}  {1:4.2f}  {2:4.1f}|"
-  LINE4 = "|tot{0:5d}s    {1:4.2f} Wh|"
+  LINE2 = "|now {0:4d}  {1:4.2f}  {2:4.2f}|".format(int(i),u,p)
+  LINE3 = "|max{0:5d}  {1:4.2f}  {2:4.1f}|".format(int(i_max),u_max,p_max)
+  LINE4 = "|tot{0:5d}s    {1:4.2f} Wh|".format(secs,p_sum/3600.0)
 
-  if have_term:
+  if options.out_opt == "term" or options.out_opt == "both":
     print("\033c")
-    print(LINE0.format())
-    print(LINE1.format())
-    print(LINE2.format(int(i),u,p))
-    print(LINE3.format(int(i_max),u_max,p_max))
-    print(LINE4.format(secs,p_sum/3600.0))
-    print(LINE0.format())
-  else:
-    options.logger.msg("%s: %fV, %fmA, %fW" % (ts.strftime(TIMESTAMP_FMT+".%f"),
-                                             u,i,p))
-  if have_disp:
+    print(LINE0)
+    print(LINE1)
+    print(LINE2)
+    print(LINE3)
+    print(LINE4)
+    print(LINE0)
+  if options.out_opt == "44780" or options.out_opt == "both":
     pass
 
 # --- collect data   ---------------------------------------------------------
@@ -281,6 +292,10 @@ def get_parser():
     dest='do_print',
     help='print results')
 
+  parser.add_argument('-O', '--output', nargs='?',
+    metavar='opt', default='auto', const="auto",
+    dest='out_opt',
+    help='output-mode for measurements (auto|44780|term|both|log|none)')
   parser.add_argument('-R', '--raw', action='store_true',
     dest='raw', default=False,
     help='record raw ADC-values')
@@ -468,7 +483,7 @@ if __name__ == '__main__':
   check_options(options)
 
   # query output options
-  query_output_opts()
+  query_output_opts(options)
 
   # initialize database
   if not options.do_notcreate:
