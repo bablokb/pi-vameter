@@ -13,17 +13,40 @@
 -->
 
 <script  type="text/javascript">
+
+  get_results = function() {
+    $.ajax({
+      type: "POST",
+      cache: false,
+      url: "/results",
+      success: function(data){
+        $.each(data,function(row) {
+          row.start_ts = (new Date(row.start_ts)).toLocaleString();
+          row.end_ts = (new Date(row.end_ts)).toLocaleString();
+        });
+        var table = $('#result_list').DataTable();
+        table.clear();
+        table.rows.add(data).draw();
+      }
+    });
+     return false;
+  };
+
   $(document).ready(function() {
       $("#result_list").DataTable( {
         select: {style: 'single'},
         columns: [
-            { data: "START_DT", title: "Start" },
-            { data: "END_DT",   title: "End" },
-            { data: "NAME",     title: "Name" },
-            { data: "DELETE",   title: "Delete" },
-            { data: "DOWNLOAD", title: "Download" }
+            { data: "start_ts", title: "Start" },
+            { data: "end_ts",   title: "End" },
+            { data: "I_avg",    title: "I (mA) avg" },
+            { data: "I_max",    title: "I (mA) max" },
+            { data: "U_avg",    title: "U (V) avg" },
+            { data: "U_max",    title: "U (V) max" },
+            { data: "P_avg",    title: "P (W) avg" },
+            { data: "P_tot",    title: "P (WH) total" }
         ]
       });
+      get_results();
   });
 </script>
 
