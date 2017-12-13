@@ -28,10 +28,10 @@ from bottle import route
 class Options(object):
   pass
 
-# --- get limits   ----------------------------------------------------------
+# --- get values   ----------------------------------------------------------
 
-def get_limits(rrd):
-  """ return first and last ts with valid data """
+def get_limits(rrd,item):
+  """ return key values of given database """
 
   first = rrdtool.first(rrd)
   last  = rrdtool.last(rrd)
@@ -40,13 +40,24 @@ def get_limits(rrd):
                                             "--start", str(first),
                                             "--end", str(last),
                                             "--resolution", "1")
-  # extract valid values
+  # extract time-range with valid values
   ts_start, ts_end, ts_res = time_span
   times = range(ts_start, ts_end, ts_res)
   result = zip(times, values)
   for ts,v in result:
     if v[0] != (None,None,None):
-      return ts,last 
+      item['start_ts'] = ts
+      item['end_ts']   = last
+      break
+
+  # extract avg and max values
+  item['I_avg'] = None
+  item['I_max'] = None
+  item['U_avg'] = None
+  item['U_max'] = None
+  item['P_avg'] = None
+  item['P_tot'] = None
+
 
 # --- get result list   -----------------------------------------------------
 
@@ -70,16 +81,10 @@ def get_results():
     item = {}
     item['rrd'] = rrd
     for m in ['I','U','P']:
-      item[m] = "%s-%s.png" % (root,m)
-    (item['start_ts'],item['end_ts']) = get_limits(rrd)
+      item["%s_img" % m] = "%s-%s.png" % (root,m)
+    get_values(rrd,item)
     results.append(item)
   return results
-
-  # query first and last timestamp
-  
-  #          { data: "START_DT", title: "Start" },
-  #          { data: "END_DT",   title: "End" },
-  #          { data: "NAME",     title: "Name" },
 
 # --- query webroot   -------------------------------------------------------
 
@@ -110,9 +115,9 @@ def main_page():
 
 # --- results   -------------------------------------------------------------
 
-@route('/results',method='GET')
+@route('/results',method='POST')
 def results():
-  # lookup results in the filesystem
+  """ lookup results in the filesystem """
   rows = get_results()
   print("DEBUG: rows: %r" % rows)
   if not rows:
@@ -122,6 +127,38 @@ def results():
   print("DEBUG: number of results: %d" % len(rows))
   bottle.response.content_type = 'application/json'
   return json.dumps(rows)
+
+# --- start data collection   -----------------------------------------------
+
+@route('/start',method='POST')
+def start():
+  """ start data collection """
+  print("DEBUG: starting data collection")
+  pass
+
+# --- stop data collection   -----------------------------------------------
+
+@route('/stop',method='POST')
+def stop():
+  """ stop data collection """
+  print("DEBUG: stopping data collection")
+  pass
+
+# --- shutdown system   ----------------------------------------------------
+
+@route('/shutdown',method='POST')
+def shutdown():
+  """ shutdown the system """
+  print("DEBUG: shutting down the system """)
+  pass
+
+# --- rebooting the system   -----------------------------------------------
+
+@route('/reboot',method='POST')
+def reboot():
+  """ rebooting the system """
+  print("DEBUG: rebooting the system")
+  pass
 
 # --- commandline-parser   --------------------------------------------------
 
