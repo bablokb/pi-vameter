@@ -15,13 +15,12 @@ try:
 except:
   import math
   have_spi = False
-  pass
 
 import os, sys, signal, signal, time, datetime
 import subprocess, syslog
 from argparse import ArgumentParser
 from threading import Thread, Event, Lock
-
+import json
 import rrdtool
 
 # --- constants   ------------------------------------------------------------
@@ -48,6 +47,13 @@ ADC_BYTES     = [[0,104,0],[0,120,0]]    # MCP3002
 # Hall sensor
 U_CC       =   5.0    # Volt
 CONV_VALUE =   0.185  # V/A      converter value
+
+# output format-templates
+LINE0 = "----------------------"
+LINE1 = "|   I(mA)  U(V)  P(W)|"
+LINE2 = "|{0} {1:4d}  {2:4.2f}  {3:4.2f}|"
+LINE3 = "|max{0:5d}  {1:4.2f}  {2:4.1f}|"
+LINE4 = "|tot{0:5d}s    {1:4.2f} Wh|"
 
 # --- helper class for options   --------------------------------------------
 
@@ -201,19 +207,13 @@ def display_data(options,ts,u,i,p):
                                              u,i,p))
     return
 
-  LINE0 = "----------------------"
-  LINE1 = "|   I(mA)  U(V)  P(W)|"
-  LINE2 = "|now {0:4d}  {1:4.2f}  {2:4.2f}|".format(int(i),u,p)
-  LINE3 = "|max{0:5d}  {1:4.2f}  {2:4.1f}|".format(int(i_max),u_max,p_max)
-  LINE4 = "|tot{0:5d}s    {1:4.2f} Wh|".format(secs,p_sum/3600.0)
-
   if options.out_opt == "term" or options.out_opt == "both":
     print("\033c")
     print(LINE0)
     print(LINE1)
-    print(LINE2)
-    print(LINE3)
-    print(LINE4)
+    print(LINE2.format("now",int(i),u,p))
+    print(LINE3.format(int(i_max),u_max,p_max))
+    print(LINE4.format(secs,p_sum/3600.0))
     print(LINE0)
   if options.out_opt == "44780" or options.out_opt == "both":
     pass
@@ -257,97 +257,6 @@ def collect_data(options):
     ms = datetime.datetime.now().microsecond
     poll_int = INTERVAL - 1 + (1000000 - ms)/1000000.0
 
-# --- signal-handler   -----------------------------------------------------
-
-def signal_handler(_signo, _stack_frame):
-  """ Signal-handler to cleanup threads """
-
-  global data_thread, options
-  options.logger.msg("interrupt %d detected, exiting" % _signo)
-  return
-
-# --- cmdline-parser   ------------------------------------------------------
-
-def get_parser():
-  """ configure cmdline-parser """
-
-  parser = ArgumentParser(add_help=False,
-    description='Pi VA-meter')
-
-  parser.add_argument('-D', '--dir', nargs=1,
-    metavar='directory', default=[os.path.expanduser("~")],
-    dest='target_dir',
-    help='directory for RRDs and graphics if no database-name is supplied')
-  parser.add_argument('-n', '--no-create', action='store_true',
-    dest='do_notcreate', default=False,
-    help="don't recreate the database")
-  parser.add_argument('-r', '--run', action='store_true',
-    dest='do_run',
-    help='start measurement (default)')
-  parser.add_argument('-g', '--graph', nargs='?',
-    metavar='graph_opt', default=None, const="UIP",
-    dest='do_graph',
-    help='create graphic from data for U,I,P (use any combination)')
-  parser.add_argument('-p', '--print', action='store_true',
-    dest='do_print',
-    help='print results')
-
-  parser.add_argument('-O', '--output', nargs='?',
-    metavar='opt', default='auto', const="auto",
-    dest='out_opt',
-    help='output-mode for measurements (auto|44780|term|both|log|none)')
-  parser.add_argument('-R', '--raw', action='store_true',
-    dest='raw', default=False,
-    help='record raw ADC-values')
-
-  parser.add_argument('-d', '--debug', metavar='debug-mode',
-    dest='debug', default=False,
-    help='start in debug-mode')
-  parser.add_argument('-s', '--simulate', metavar='simulate',
-    dest='simulate', default=False,
-    help='simulate reads from ADC')
-  parser.add_argument('-h', '--help', action='help',
-    help='print this help')
-
-  parser.add_argument('dbfile', nargs='?', metavar='database-file',
-    default=None, help='RRD database-file')
-  return parser
-
-# --- validate and fix options   ---------------------------------------------
-
-def check_options(options):
-  """ validate and fix options """
-
-  # add logger
-  options.logger   = Msg(options.debug)
-
-  # default database
-  if not options.dbfile:
-    now            = datetime.datetime.now()
-    fname          = now.strftime("%Y%m%d_%H%M%S.rrd")
-    options.dbfile = os.path.join(options.target_dir[0],fname)
-  options.logger.msg("[info] Database-file: %s" % options.dbfile)
-
-  # set run-mode as default
-  if not options.do_graph and not options.do_print:
-    options.do_run = True
-
-  # do not recreate the database if no new run is requested
-  if os.path.exists(options.dbfile) and not options.do_run:
-    options.do_notcreate = True
-
-  # check if we need to create the database
-  if not os.path.exists(options.dbfile) and options.do_notcreate:
-      options.logger.msg("[error] database does not exist")
-      sys.exit(3)
-  if not os.path.exists(options.dbfile) and not options.do_run:
-      options.logger.msg("[error] database does not exist")
-      sys.exit(3)
-
-  # without real hardware we just simulate
-  options.simulate = options.simulate or not have_spi
-  options.logger.msg("[info] simulation-mode: %r" % options.simulate)
-
 # --- collect data   ---------------------------------------------------------
 
 def get_data(options):
@@ -390,14 +299,102 @@ def fetch_data(options):
   result = zip(times, values)
   return titles, [v for v in result if v[1] != (None,None,None)]
 
+# --- summarize data   -------------------------------------------------------
+
+def sum_data(options):
+  """ summarize collected data """
+
+  # check if summary-file exists and is newer than database
+  sumfile = os.path.splitext(options.dbfile)[0] + ".summary"
+  if os.path.exists(sumfile) and (
+    os.path.getmtime(options.dbfile) <= os.path.getmtime(sumfile)):
+    # summary is current
+    f = open(sumfile,"r")
+    result = json.load(f)
+    f.close()
+    return result
+  else:
+    options.logger.msg("[info] creating summary-file: %s" % sumfile)
+
+  # create summary
+  first = result_data[0][0]
+  last  = result_data[-1][0]
+
+  # extract avg and max values
+  I_def = "DEF:I=%s:I:AVERAGE" %  options.dbfile
+  I_avg = "VDEF:I_avg=I,AVERAGE"
+  I_max = "VDEF:I_max=I,MAXIMUM"
+
+  U_def = "DEF:U=%s:U:AVERAGE" %  options.dbfile
+  U_avg = "VDEF:U_avg=U,AVERAGE"
+  U_max = "VDEF:U_max=U,MAXIMUM"
+
+  P_def = "DEF:P=%s:P:AVERAGE" %  options.dbfile
+  P_avg = "VDEF:P_avg=P,AVERAGE"
+  P_max = "VDEF:P_max=P,MAXIMUM"
+
+  args = ["rrdtool", "graphv",options.dbfile,
+          "--start", str(first),
+          "--end",   str(last),
+          I_def, I_avg, I_max,
+          U_def, U_avg, U_max,
+          P_def, P_avg, P_max,
+          "PRINT:I_avg:%6.0lf",
+          "PRINT:I_max:%6.0lf",
+          "PRINT:U_avg:%6.2lf",
+          "PRINT:U_max:%6.2lf",
+          "PRINT:P_avg:%6.2lf",
+          "PRINT:P_max:%6.2lf"
+         ]
+  info = rrdtool.graphv(options.dbfile,args[3:])
+  summary = {
+    "ts_start": first,
+    "ts_end":   last,
+    "I_avg": int(info['print[0]']),
+    "I_max": int(info['print[1]']),
+    "U_avg": float(info['print[2]']),
+    "U_max": float(info['print[3]']),
+    "P_avg": float(info['print[4]']),
+    "P_max": float(info['print[5]']),
+    "P_tot": (last-first+1)*float(info['print[4]'])/3600
+    }
+
+  # write results to file
+  f = open(sumfile,"w")
+  json.dump(summary,f,indent=2,sort_keys=True)
+  f.close()
+
+  return summary
+
+# --- print summary   --------------------------------------------------------
+
+def print_summary(options):
+  """ print summary of collected data """
+
+  global result_summary
+  i_avg = result_summary["I_avg"]
+  u_avg = result_summary["U_avg"]
+  p_avg = result_summary["P_avg"]
+  i_max = result_summary["I_max"]
+  u_max = result_summary["U_max"]
+  p_max = result_summary["P_max"]
+  p_tot = result_summary["P_tot"]
+  secs  = result_summary["ts_end"]-result_summary["ts_start"]+1
+  
+  print(LINE0)
+  print(LINE1)
+  print(LINE2.format("avg",i_avg,u_avg,p_avg))
+  print(LINE3.format(i_max,u_max,p_max))
+  print(LINE4.format(secs,p_tot))
+  print(LINE0)
+
 # --- print data   -----------------------------------------------------------
 
 def print_data(options):
   """ print collected data """
-  title, result = fetch_data(options)
 
   # print data
-  for ts,(u,i,p) in result:
+  for ts,(u,i,p) in result_data:
     ts = datetime.datetime.fromtimestamp(ts).strftime(TIMESTAMP_FMT)
     u = 0 if not u else u
     i = 0 if not i else i
@@ -407,17 +404,16 @@ def print_data(options):
       format = "%s: %s=%4.2fV, %s=%4.0fmA, %s=%4.2fW"
     else:
       format = "%s: %s=%6.4fV, %s=%6.3fA, %s=%6.4fW"
-    print(format % (ts, title[0],u, title[1],i, title[2],p))
+    print(format % (ts, result_title[0],u, result_title[1],i, result_title[2],p))
 
 # --- graph data   -----------------------------------------------------------
 
 def graph_data(options):
   """ create graphical representation of data """
 
-  # fetch data (to find first true data-point)
-  _, data = fetch_data(options)
-  first = data[0][0]  - 5
-  last  = data[-1][0] + 5
+  # extend first and last datapoint a bit for a nice graphical rep
+  first = result_data[0][0]  - 5
+  last  = result_data[-1][0] + 5
 
   for graph_type in options.do_graph:
     imgfile = os.path.splitext(options.dbfile)[0] + "-%s.png" % graph_type
@@ -474,6 +470,100 @@ def graph_data(options):
 
     rrdtool.graph(imgfile,args[3:])
   
+# --- signal-handler   -----------------------------------------------------
+
+def signal_handler(_signo, _stack_frame):
+  """ Signal-handler to cleanup threads """
+
+  global data_thread, options
+  options.logger.msg("interrupt %d detected, exiting" % _signo)
+  return
+
+# --- cmdline-parser   ------------------------------------------------------
+
+def get_parser():
+  """ configure cmdline-parser """
+
+  parser = ArgumentParser(add_help=False,
+    description='Pi VA-meter')
+
+  parser.add_argument('-D', '--dir', nargs=1,
+    metavar='directory', default=[os.path.expanduser("~")],
+    dest='target_dir',
+    help='directory for RRDs and graphics if no database-name is supplied')
+  parser.add_argument('-n', '--no-create', action='store_true',
+    dest='do_notcreate', default=False,
+    help="don't recreate the database")
+  parser.add_argument('-r', '--run', action='store_true',
+    dest='do_run',
+    help='start measurement (default)')
+  parser.add_argument('-g', '--graph', nargs='?',
+    metavar='graph_opt', default=None, const="UIP",
+    dest='do_graph',
+    help='create graphic from data for U,I,P (use any combination)')
+  parser.add_argument('-p', '--print', action='store_true',
+    dest='do_print',
+    help='print results')
+  parser.add_argument('-S', '--summary', action='store_true',
+    dest='do_sum',
+    help='print summary')
+
+  parser.add_argument('-O', '--output', nargs='?',
+    metavar='opt', default='auto', const="auto",
+    dest='out_opt',
+    help='output-mode for measurements (auto|44780|term|both|log|none)')
+  parser.add_argument('-R', '--raw', action='store_true',
+    dest='raw', default=False,
+    help='record raw ADC-values')
+
+  parser.add_argument('-d', '--debug', metavar='debug-mode',
+    dest='debug', default=False,
+    help='start in debug-mode')
+  parser.add_argument('-s', '--simulate', metavar='simulate',
+    dest='simulate', default=False,
+    help='simulate reads from ADC')
+  parser.add_argument('-h', '--help', action='help',
+    help='print this help')
+
+  parser.add_argument('dbfile', nargs='?', metavar='database-file',
+    default=None, help='RRD database-file')
+  return parser
+
+# --- validate and fix options   ---------------------------------------------
+
+def check_options(options):
+  """ validate and fix options """
+
+  # add logger
+  options.logger   = Msg(options.debug)
+
+  # default database
+  if not options.dbfile:
+    now            = datetime.datetime.now()
+    fname          = now.strftime("%Y%m%d_%H%M%S.rrd")
+    options.dbfile = os.path.join(options.target_dir[0],fname)
+  options.logger.msg("[info] Database-file: %s" % options.dbfile)
+
+  # set run-mode as default
+  if not options.do_graph and not options.do_print and not options.do_sum:
+    options.do_run = True
+
+  # do not recreate the database if no new run is requested
+  if os.path.exists(options.dbfile) and not options.do_run:
+    options.do_notcreate = True
+
+  # check if we need to create the database
+  if not os.path.exists(options.dbfile) and options.do_notcreate:
+      options.logger.msg("[error] database does not exist")
+      sys.exit(3)
+  if not os.path.exists(options.dbfile) and not options.do_run:
+      options.logger.msg("[error] database does not exist")
+      sys.exit(3)
+
+  # without real hardware we just simulate
+  options.simulate = options.simulate or not have_spi
+  options.logger.msg("[info] simulation-mode: %r" % options.simulate)
+
 # --- main program   ---------------------------------------------------------
 
 if __name__ == '__main__':
@@ -493,9 +583,15 @@ if __name__ == '__main__':
   if options.do_run:
     get_data(options)
 
+  # we always create a summary if it does not yet exist
+  result_title,result_data = fetch_data(options)
+  result_summary           = sum_data(options)
+
   # create output
   if options.do_print:
     print_data(options)
+  if options.do_sum:
+    print_summary(options)
   if options.do_graph:
     graph_data(options)
 
