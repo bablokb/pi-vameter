@@ -20,9 +20,11 @@
       cache: false,
       url: "/results",
       success: function(data){
-        $.each(data,function(row) {
-          row.start_ts = (new Date(row.start_ts)).toLocaleString();
-          row.end_ts = (new Date(row.end_ts)).toLocaleString();
+        data.forEach(function(row) {
+          console.error(row);
+          row.ts_start = (new Date(1000*row.ts_start)).toLocaleString();
+          row.ts_end   = (new Date(1000*row.ts_end)).toLocaleString();
+          console.error(row);
         });
         var table = $('#result_list').DataTable();
         table.clear();
@@ -36,13 +38,14 @@
       $("#result_list").DataTable( {
         select: {style: 'single'},
         columns: [
-            { data: "start_ts", title: "Start" },
-            { data: "end_ts",   title: "End" },
+            { data: "ts_start", title: "Start" },
+            { data: "ts_end",   title: "End" },
             { data: "I_avg",    title: "I (mA) avg" },
             { data: "I_max",    title: "I (mA) max" },
             { data: "U_avg",    title: "U (V) avg" },
             { data: "U_max",    title: "U (V) max" },
             { data: "P_avg",    title: "P (W) avg" },
+            { data: "P_max",    title: "P (W) max" },
             { data: "P_tot",    title: "P (WH) total" }
         ]
       });
