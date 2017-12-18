@@ -30,34 +30,14 @@ class Options(object):
 
 # --- get values   ----------------------------------------------------------
 
-def get_limits(rrd,item):
+def get_values(rrd):
   """ return key values of given database """
 
-  first = rrdtool.first(rrd)
-  last  = rrdtool.last(rrd)
-
-  time_span, _, values = rrdtool.fetch(rrd,"AVERAGE",
-                                            "--start", str(first),
-                                            "--end", str(last),
-                                            "--resolution", "1")
-  # extract time-range with valid values
-  ts_start, ts_end, ts_res = time_span
-  times = range(ts_start, ts_end, ts_res)
-  result = zip(times, values)
-  for ts,v in result:
-    if v[0] != (None,None,None):
-      item['start_ts'] = ts
-      item['end_ts']   = last
-      break
-
-  # extract avg and max values
-  item['I_avg'] = None
-  item['I_max'] = None
-  item['U_avg'] = None
-  item['U_max'] = None
-  item['P_avg'] = None
-  item['P_tot'] = None
-
+  sumfile = os.path.splitext(rrd)[0] + ".summary"
+  f = open(sumfile,"r")
+  result = json.load(f)
+  f.close()
+  return result
 
 # --- get result list   -----------------------------------------------------
 
@@ -78,11 +58,10 @@ def get_results():
     (root,ext) = os.path.splitext(rrd)
     if not ext == ".rrd":
       continue
-    item = {}
+    item = get_values(rrd)
     item['rrd'] = rrd
     for m in ['I','U','P']:
       item["%s_img" % m] = "%s-%s.png" % (root,m)
-    get_values(rrd,item)
     results.append(item)
   return results
 
