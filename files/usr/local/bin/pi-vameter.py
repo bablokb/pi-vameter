@@ -103,7 +103,10 @@ def query_output_opts(options):
   """ query output options """
 
   if options.out_opt == "auto":
-    have_term = os.getpgrp() == os.tcgetpgrp(sys.stdout.fileno())
+    try:
+      have_term = os.getpgrp() == os.tcgetpgrp(sys.stdout.fileno())
+    except:
+      have_term = False
     #TODO: query i2c for LCD-display
     have_disp = False
     if have_term and have_disp:
