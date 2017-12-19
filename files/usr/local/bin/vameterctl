@@ -55,7 +55,7 @@ start_blink() {
 # --- main program   -------------------------------------------------------
 
 # sanity check
-[ "$pin" != "$PIN_GPIO" -o "$value" -ne 1 ] && exit 3
+[ "$pinnr" != "$PIN_GPIO" -o "$value" -ne 1 ] && exit 3
 
 setup_blink
 
