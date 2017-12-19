@@ -59,6 +59,7 @@ def get_results():
     if not ext == ".rrd":
       continue
     item = get_values(rrd)
+    item['name'] = os.path.splitext(f)[0]
     item['rrd'] = rrd
     for m in ['I','U','P']:
       item["%s_img" % m] = "%s-%s.png" % (root,m)
@@ -84,6 +85,11 @@ def css_pages(filepath):
 @route('/js/<filepath:path>')
 def js_pages(filepath):
     return bottle.static_file(filepath, root=get_webpath('js'))
+
+@route('/data/<filepath:path>')
+def data_pages(filepath):
+  global options
+  return bottle.static_file(filepath, root=options.data_root[0])
 
 # --- main page   -----------------------------------------------------------
 
