@@ -54,15 +54,14 @@ def get_results():
   # build list of rrd-databases
   results = []
   for f in os.listdir(data_root):
-    rrd = os.path.join(data_root,f)
-    (root,ext) = os.path.splitext(rrd)
+    (name,ext) = os.path.splitext(f)
     if not ext == ".rrd":
       continue
-    item = get_values(rrd)
-    item['name'] = os.path.splitext(f)[0]
-    item['rrd'] = rrd
+    item = get_values(os.path.join(data_root,f))
+    item['name'] = name
+    item['rrd'] = "/data/%s" % f
     for m in ['I','U','P']:
-      item["%s_img" % m] = "%s-%s.png" % (root,m)
+      item["%s_img" % m] = "/data/%s-%s.png" % (name,m)
     results.append(item)
   return results
 
