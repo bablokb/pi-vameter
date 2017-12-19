@@ -13,14 +13,22 @@
 -->
 
 <script  type="text/javascript">
- function openTab(tabName) {
+  function openTab(tabName) {
     var i;
     var x = document.getElementsByClassName("tab");
     for (i = 0; i < x.length; i++) {
         x[i].style.display = "none";
     }
     document.getElementById(tabName).style.display = "block";
-}</script>
+  };
+
+  function setTabData(line) {
+    console.error("setting src for ipng",line);
+    $('#I_img').attr('src',line['I_img']);
+    $('#U_img').attr('src',line['U_img']);
+    $('#P_img').attr('src',line['P_img']);
+  };
+</script>
 
  <div class="w3-bar w3-black">
   <button class="w3-bar-item w3-button" onclick="openTab('ipng')">Current</button>
@@ -32,17 +40,17 @@
 <div id="content_graphics" class="content">
   <div id="ipng" class="tab" style="display:none">
     <h2>Current</h2>
-    <img src="img/loading.png" />
+    <img id="I_img" src="img/loading.png" />
   </div>
 
   <div id="upng" class="tab" style="display:none">
     <h2>Voltage</h2>
-    <img src="img/loading.png" />
+    <img id="U_img" src="img/loading.png" />
   </div>
 
   <div id="ppng" class="tab" style="display:none">
     <h2>Power</h2>
-    <img src="img/loading.png" />
+    <img id="P_img" src="img/loading.png" />
   </div>
 
   <div id="data" class="tab" style="display:none">
