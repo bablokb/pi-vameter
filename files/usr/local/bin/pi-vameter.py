@@ -356,7 +356,7 @@ def sum_data(options):
     "U_max": float(info['print[3]']),
     "P_avg": float(info['print[4]']),
     "P_max": float(info['print[5]']),
-    "P_tot": (last-first+1)*float(info['print[4]'])/3600
+    "P_tot": round((last-first+1)*float(info['print[4]'])/3600,2)
     }
 
   # write results to file
