@@ -21,10 +21,8 @@
       url: "/results",
       success: function(data){
         data.forEach(function(row) {
-          console.error(row);
           row.ts_start = (new Date(1000*row.ts_start)).toLocaleString();
           row.ts_end   = (new Date(1000*row.ts_end)).toLocaleString();
-          console.error(row);
         });
         var table = $('#result_list').DataTable();
         table.clear();
@@ -35,9 +33,10 @@
   };
 
   $(document).ready(function() {
-      $("#result_list").DataTable( {
+      var table = $("#result_list").DataTable( {
         select: {style: 'single'},
         columns: [
+            { data: "name",     title: "Name" },
             { data: "ts_start", title: "Start" },
             { data: "ts_end",   title: "End" },
             { data: "I_avg",    title: "I (mA) avg" },
@@ -50,6 +49,10 @@
         ]
       });
       get_results();
+      table.on('select', function(e,dt,type,indexes) {
+        var data = table.rows(indexes).data();
+        setTabData(data[0]);
+      });
   });
 </script>
 
