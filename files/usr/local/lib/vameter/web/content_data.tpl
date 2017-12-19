@@ -45,7 +45,7 @@
             { data: "U_max",    title: "U (V) max" },
             { data: "P_avg",    title: "P (W) avg" },
             { data: "P_max",    title: "P (W) max" },
-            { data: "P_tot",    title: "P (WH) total" }
+            { data: "P_tot",    title: "P (Wh) total" }
         ]
       });
       get_results();
