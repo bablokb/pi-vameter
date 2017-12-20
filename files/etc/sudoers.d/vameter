@@ -1,0 +1,1 @@
+vameter ALL=(ALL) NOPASSWD: /sbin/halt, /sbin/reboot
