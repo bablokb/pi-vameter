@@ -15,7 +15,7 @@ DATA_ROOT    = "/var/lib/vameter/data"
 
 # --- System-Imports   ------------------------------------------------------
 
-import sys, os, json
+import sys, os, json, subprocess
 from argparse import ArgumentParser
 
 import rrdtool
@@ -117,16 +117,37 @@ def results():
 @route('/start',method='POST')
 def start():
   """ start data collection """
-  print("DEBUG: starting data collection")
-  pass
+
+  global options
+  # get name-parameter
+  name = bottle.request.forms.get('name')
+
+  print("DEBUG: starting data collection (name: %s)" % name)
+  args = [
+    "files/usr/local/bin/pi-vameter.py",
+    "-D",
+    options.data_root[0],
+    "-g",
+    "UIP",
+    "-r"
+    ]
+  if len(name):
+    args.append(os.path.join(options.data_root[0],"%s.rrd" % name))
+  options.collect_process = subprocess.Popen(args,stdout=None,
+                                             stderr=subprocess.STDOUT)
+
 
 # --- stop data collection   -----------------------------------------------
 
 @route('/stop',method='POST')
 def stop():
   """ stop data collection """
+
+  global options
   print("DEBUG: stopping data collection")
-  pass
+  if options.collect_process:
+    options.collect_process.terminate()
+    options.collect_process = None
 
 # --- shutdown system   ----------------------------------------------------
 
@@ -178,6 +199,7 @@ if __name__ == '__main__':
   # read options
   opt_parser = get_parser()
   options = opt_parser.parse_args(namespace=Options)
+  options.collect_process = None
 
   # start server
   WEB_ROOT = get_webroot(__file__)
