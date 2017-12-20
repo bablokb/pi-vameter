@@ -124,7 +124,7 @@ def start():
 
   print("DEBUG: starting data collection (name: %s)" % name)
   args = [
-    "/usr/local/bin/pi-vameter.py",
+    os.path.join(options.pgm_dir,"pi-vameter.py"),
     "-D",
     options.data_root[0],
     "-g",
@@ -203,6 +203,8 @@ if __name__ == '__main__':
   options = opt_parser.parse_args(namespace=Options)
   options.collect_process = None
   options.devnull = open(os.devnull)
+  options.pgm_dir = os.path.dirname(os.path.abspath(__file__))
+  print("DEBUG: pgm_dir directory: %s" % options.pgm_dir)
 
   # start server
   WEB_ROOT = get_webroot(__file__)
