@@ -157,7 +157,7 @@ def stop():
 def shutdown():
   """ shutdown the system """
   print("DEBUG: shutting down the system """)
-  pass
+  os.system("sudo /sbin/halt &")
 
 # --- rebooting the system   -----------------------------------------------
 
@@ -165,7 +165,7 @@ def shutdown():
 def reboot():
   """ rebooting the system """
   print("DEBUG: rebooting the system")
-  pass
+  os.system("sudo /sbin/reboot &")
 
 # --- commandline-parser   --------------------------------------------------
 
