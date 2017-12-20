@@ -25,11 +25,19 @@ showMsg=function(text,time) {
 */
 
 doStart=function() {
-  $.post("/start");
-  showMsg("Starting data-collection ...",2000);
-  $('#inpStart').val('');
-  $('#Start').hide();
-  $('#btnStop').show();
+  var name = $('#inpStart').val();
+  $.ajax({
+    type: "POST",
+        data : {name: name},
+    cache: false,
+    url: "/start",
+    success: function(data){
+      showMsg("Starting data-collection ...",2000);
+      $('#Start').hide();
+      $('#inpStart').val('');
+      $('#btnStop').show();
+    }
+  });
 };
 
 /**
