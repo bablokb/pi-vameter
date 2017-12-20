@@ -27,8 +27,10 @@
   <a id="btnShutdown" href="#" class="w3-bar-item w3-button w3-border-right
                  w3-mobile" onclick="doShutdown()">Shutdown</a>
 
-  <a id="btnProject" href="#" class="w3-bar-item w3-button w3-border-right
-                w3-mobile w3-light-blue">Project</a>
+  <a id="btnProject" href="https://github.com/bablokb/pi-vameter"
+                     target="_blank"
+                     class="w3-bar-item w3-button w3-border-right
+                            w3-mobile w3-light-blue">Project</a>
   <a id="btnAuthor" href="#" class="w3-bar-item w3-button w3-border-right
                 w3-mobile w3-light-blue" onclick="onAuthor()">Author</a>
   <a id="btnLicense" href="#" class="w3-bar-item w3-button w3-border-right
