@@ -124,7 +124,7 @@ def start():
 
   print("DEBUG: starting data collection (name: %s)" % name)
   args = [
-    "files/usr/local/bin/pi-vameter.py",
+    "/usr/local/bin/pi-vameter.py",
     "-D",
     options.data_root[0],
     "-g",
@@ -133,7 +133,9 @@ def start():
     ]
   if len(name):
     args.append(os.path.join(options.data_root[0],"%s.rrd" % name))
-  options.collect_process = subprocess.Popen(args,stdout=None,
+
+  # start process
+  options.collect_process = subprocess.Popen(args,stdout=options.devnull,
                                              stderr=subprocess.STDOUT)
 
 
@@ -200,6 +202,7 @@ if __name__ == '__main__':
   opt_parser = get_parser()
   options = opt_parser.parse_args(namespace=Options)
   options.collect_process = None
+  options.devnull = open(os.devnull)
 
   # start server
   WEB_ROOT = get_webroot(__file__)
