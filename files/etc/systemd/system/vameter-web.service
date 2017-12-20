@@ -1,0 +1,23 @@
+# --------------------------------------------------------------------------
+# Systemd service Definition for vameter-web.service.
+#
+# The service starts the script /usr/local/bin/vameter-web.py
+#
+# Author: Bernhard Bablok
+# License: GPL3
+#
+# Website: https://github.com/bablokb/mtv_cli
+#
+# --------------------------------------------------------------------------
+
+[Unit]
+Description=Webinterface for vameter
+After=multi-user.target
+ 
+[Service]
+Type=simple
+User=vameter
+ExecStart=/usr/local/bin/vameter-web.py -D /var/lib/vameter/data -P 8026
+
+[Install]
+WantedBy=multi-user.target
