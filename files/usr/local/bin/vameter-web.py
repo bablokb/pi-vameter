@@ -67,8 +67,7 @@ def get_results():
 
 # --- query webroot   -------------------------------------------------------
 
-def get_webroot(pgm):
-  pgm_dir = os.path.dirname(os.path.realpath(pgm))
+def get_webroot(pgm_dir):
   return os.path.realpath(os.path.join(pgm_dir,"..","lib","vameter","web"))
 
 def get_webpath(path):
@@ -102,13 +101,19 @@ def main_page():
 @route('/results',method='POST')
 def results():
   """ lookup results in the filesystem """
+
+  global options
+
   rows = get_results()
-  print("DEBUG: rows: %r" % rows)
+  if options.debug:
+    print("DEBUG: rows: %r" % rows)
   if not rows:
-    print("DEBUG: no results available")
+    if options.debug:
+      print("DEBUG: no results available")
     return "{}"
 
-  print("DEBUG: number of results: %d" % len(rows))
+  if options.debug:
+    print("DEBUG: number of results: %d" % len(rows))
   bottle.response.content_type = 'application/json'
   return json.dumps(rows)
 
@@ -122,7 +127,8 @@ def start():
   # get name-parameter
   name = bottle.request.forms.get('name')
 
-  print("DEBUG: starting data collection (name: %s)" % name)
+  if options.debug:
+    print("DEBUG: starting data collection (name: %s)" % name)
   args = [
     os.path.join(options.pgm_dir,"pi-vameter.py"),
     "-D",
@@ -146,7 +152,8 @@ def stop():
   """ stop data collection """
 
   global options
-  print("DEBUG: stopping data collection")
+  if options.debug:
+    print("DEBUG: stopping data collection")
   if options.collect_process:
     options.collect_process.terminate()
     options.collect_process = None
@@ -155,8 +162,11 @@ def stop():
 
 @route('/shutdown',method='POST')
 def shutdown():
-  """ shutdown the system """
-  print("DEBUG: shutting down the system """)
+  """ shutdowne the system """
+
+  global options
+  if options.debug:
+    print("DEBUG: shutting down the system """)
   os.system("sudo /sbin/halt &")
 
 # --- rebooting the system   -----------------------------------------------
@@ -164,7 +174,10 @@ def shutdown():
 @route('/reboot',method='POST')
 def reboot():
   """ rebooting the system """
-  print("DEBUG: rebooting the system")
+
+  global options
+  if options.debug:
+    print("DEBUG: rebooting the system")
   os.system("sudo /sbin/reboot &")
 
 # --- commandline-parser   --------------------------------------------------
@@ -204,12 +217,13 @@ if __name__ == '__main__':
   options.collect_process = None
   options.devnull = open(os.devnull)
   options.pgm_dir = os.path.dirname(os.path.abspath(__file__))
-  print("DEBUG: pgm_dir directory: %s" % options.pgm_dir)
+  if options.debug:
+    print("DEBUG: pgm_dir directory: %s" % options.pgm_dir)
 
   # start server
-  WEB_ROOT = get_webroot(__file__)
-  print("DEBUG: web-root directory: %s" % WEB_ROOT)
+  WEB_ROOT = get_webroot(options.pgm_dir)
   if options.debug:
+    print("DEBUG: web-root directory: %s" % WEB_ROOT)
     print("DEBUG: starting the webserver in debug-mode")
     bottle.run(host='localhost', port=options.port[0], debug=True,reloader=True)
   else:
