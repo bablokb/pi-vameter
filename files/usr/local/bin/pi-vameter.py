@@ -53,7 +53,7 @@ LINE0 = "----------------------"
 LINE1 = "|   I(mA)  U(V)  P(W)|"
 LINE2 = "|{0} {1:4d}  {2:4.2f}  {3:4.2f}|"
 LINE3 = "|max{0:5d}  {1:4.2f}  {2:4.1f}|"
-LINE4 = "|tot{0:5d}s    {1:4.2f} Wh|"
+LINE4 = "|tot {0:02d}:{1:02d}:{2:02d} {3:4.2f} Wh|"
 
 # --- helper class for options   --------------------------------------------
 
@@ -201,7 +201,7 @@ def convert_data(u_raw,ui_raw):
 def display_data(options,ts,u,i,p):
   """ display current data """
 
-  global u_max, i_max, p_max, p_sum
+  global secs, u_max, i_max, p_max, p_sum
 
   if options.out_opt == "none":
     return
@@ -210,13 +210,17 @@ def display_data(options,ts,u,i,p):
                                              u,i,p))
     return
 
+  # convert secs to a readable representation
+  m, s = divmod(secs,60)
+  h, m = divmod(m,60)
+
   if options.out_opt == "term" or options.out_opt == "both":
     print("\033c")
     print(LINE0)
     print(LINE1)
     print(LINE2.format("now",int(i),u,p))
     print(LINE3.format(int(i_max),u_max,p_max))
-    print(LINE4.format(secs,p_sum/3600.0))
+    print(LINE4.format(h,m,s,p_sum/3600.0))
     print(LINE0)
   if options.out_opt == "44780" or options.out_opt == "both":
     pass
