@@ -40,17 +40,14 @@
 
 <div id="content_graphics" class="content">
   <div id="ipng" class="tab" style="display:none">
-    <h2>Current</h2>
     <img id="I_img" src="img/loading.png" />
   </div>
 
   <div id="upng" class="tab" style="display:none">
-    <h2>Voltage</h2>
     <img id="U_img" src="img/loading.png" />
   </div>
 
   <div id="ppng" class="tab" style="display:none">
-    <h2>Power</h2>
     <img id="P_img" src="img/loading.png" />
   </div>
 </div>        <!-- id=content_graphics   -->
