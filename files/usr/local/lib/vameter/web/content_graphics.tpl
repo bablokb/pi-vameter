@@ -30,6 +30,8 @@
   };
 </script>
 
+<section class="w3-container">
+ <h3>Details</h3>
  <div class="w3-bar w3-black">
   <button class="w3-bar-item w3-button" onclick="openTab('ipng')">Current</button>
   <button class="w3-bar-item w3-button" onclick="openTab('upng')">Voltage</button>
@@ -54,8 +56,9 @@
   </div>
 
   <div id="data" class="tab" style="display:none">
-    <h2>Data</h2>
+    <h3>Data</h3>
     <p>Here is the data</p>
   </div>
 
 </div>        <!-- id=content_graphics   -->
+</section>

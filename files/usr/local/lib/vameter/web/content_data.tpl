@@ -68,9 +68,8 @@
 </script>
 
 
-<div id="content_data">
-
-  <h2>Available Results</h2>
+<section class="w3-container" id="content_data">
+  <h3>Measurements</h3>
   <table id="result_list" class="display"
          width="100%" cellspacing="0"></table>
-</div>
+</section>
