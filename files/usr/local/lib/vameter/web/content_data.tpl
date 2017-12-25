@@ -35,17 +35,28 @@
   $(document).ready(function() {
       var table = $("#result_list").DataTable( {
         select: {style: 'single'},
+        order: [[ 0, "asc" ]],
         columns: [
-            { data: "name",     title: "Name" },
-            { data: "ts_start", title: "Start" },
-            { data: "ts_end",   title: "End" },
-            { data: "I_avg",    title: "I (mA) avg" },
-            { data: "I_max",    title: "I (mA) max" },
-            { data: "U_avg",    title: "U (V) avg" },
-            { data: "U_max",    title: "U (V) max" },
-            { data: "P_avg",    title: "P (W) avg" },
-            { data: "P_max",    title: "P (W) max" },
-            { data: "P_tot",    title: "P (Wh) total" }
+            { data: "name",     title: "Name",
+              className: "dt-left" },
+            { data: "ts_start", title: "Start",
+              className: "dt-left" },
+            { data: "ts_end",   title: "End",
+              className: "dt-left" },
+            { data: "I_avg",    title: "I (mA) avg",
+              className: "dt-right" },
+            { data: "I_max",    title: "I (mA) max",
+              className: "dt-right" },
+            { data: "U_avg",    title: "U (V) avg",
+              className: "dt-right" },
+            { data: "U_max",    title: "U (V) max",
+              className: "dt-right" },
+            { data: "P_avg",    title: "P (W) avg",
+              className: "dt-right" },
+            { data: "P_max",    title: "P (W) max",
+              className: "dt-right" },
+            { data: "P_tot",    title: "P (Wh) total",
+              className: "dt-right" }
         ]
       });
       get_results();
@@ -60,6 +71,6 @@
 <div id="content_data">
 
   <h2>Available Results</h2>
-  <table id="result_list" 
+  <table id="result_list" class="display"
          width="100%" cellspacing="0"></table>
 </div>
