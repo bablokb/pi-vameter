@@ -36,7 +36,6 @@
   <button class="w3-bar-item w3-button" onclick="openTab('ipng')">Current</button>
   <button class="w3-bar-item w3-button" onclick="openTab('upng')">Voltage</button>
   <button class="w3-bar-item w3-button" onclick="openTab('ppng')">Power</button>
-  <button class="w3-bar-item w3-button" onclick="openTab('data')">Data</button>
 </div> 
 
 <div id="content_graphics" class="content">
@@ -54,11 +53,5 @@
     <h2>Power</h2>
     <img id="P_img" src="img/loading.png" />
   </div>
-
-  <div id="data" class="tab" style="display:none">
-    <h3>Data</h3>
-    <p>Here is the data</p>
-  </div>
-
 </div>        <!-- id=content_graphics   -->
 </section>
