@@ -13,13 +13,11 @@
 -->
 
 <script  type="text/javascript">
-  function openTab(tabName) {
-    var i;
-    var x = document.getElementsByClassName("tab");
-    for (i = 0; i < x.length; i++) {
-        x[i].style.display = "none";
-    }
-    document.getElementById(tabName).style.display = "block";
+  function openTab(button,tabName) {
+    $(".tab").css("display","none");
+    $(tabName).css("display","block");
+    $(".detail").removeClass("w3-blue-gray");
+    $(button).addClass("w3-blue-gray");
   };
 
   function setTabData(line) {
@@ -33,9 +31,12 @@
 <section class="w3-container">
  <h3>Details</h3>
  <div class="w3-bar w3-black">
-  <button class="w3-bar-item w3-button" onclick="openTab('ipng')">Current</button>
-  <button class="w3-bar-item w3-button" onclick="openTab('upng')">Voltage</button>
-  <button class="w3-bar-item w3-button" onclick="openTab('ppng')">Power</button>
+  <button class="detail w3-bar-item w3-button"
+          onclick="openTab(this,'#ipng')">Current</button>
+  <button class="detail w3-bar-item w3-button"
+          onclick="openTab(this,'#upng')">Voltage</button>
+  <button class="detail w3-bar-item w3-button"
+          onclick="openTab(this,'#ppng')">Power</button>
 </div> 
 
 <div id="content_graphics" class="content">
