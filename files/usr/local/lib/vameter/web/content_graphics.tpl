@@ -13,15 +13,19 @@
 -->
 
 <script  type="text/javascript">
+  var selected_tab = null;
   function openTab(button,tabName) {
     $(".tab").css("display","none");
     $(tabName).css("display","block");
     $(".detail").removeClass("w3-blue-gray");
     $(button).addClass("w3-blue-gray");
+    selected_tab = button;
   };
 
   function setTabData(line) {
-    console.error("setting src for ipng",line);
+    if (!selected_tab) {
+      $("#btnCurrent").click();
+    }
     $('#I_img').attr('src',line['I_img']);
     $('#U_img').attr('src',line['U_img']);
     $('#P_img').attr('src',line['P_img']);
@@ -31,11 +35,11 @@
 <section class="w3-container">
  <h3>Details</h3>
  <div class="w3-bar w3-black">
-  <button class="detail w3-bar-item w3-button"
+  <button id="btnCurrent" class="detail w3-bar-item w3-button"
           onclick="openTab(this,'#ipng')">Current</button>
-  <button class="detail w3-bar-item w3-button"
+  <button id="btnVoltage" class="detail w3-bar-item w3-button"
           onclick="openTab(this,'#upng')">Voltage</button>
-  <button class="detail w3-bar-item w3-button"
+  <button id="btnPower" class="detail w3-bar-item w3-button"
           onclick="openTab(this,'#ppng')">Power</button>
 </div> 
 
