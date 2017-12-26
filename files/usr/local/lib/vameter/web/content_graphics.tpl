@@ -45,15 +45,15 @@
 
 <div id="content_graphics" class="content">
   <div id="ipng" class="tab" style="display:none">
-    <img id="I_img" src="img/loading.png" />
+    <img id="I_img" />
   </div>
 
   <div id="upng" class="tab" style="display:none">
-    <img id="U_img" src="img/loading.png" />
+    <img id="U_img" />
   </div>
 
   <div id="ppng" class="tab" style="display:none">
-    <img id="P_img" src="img/loading.png" />
+    <img id="P_img" />
   </div>
 </div>        <!-- id=content_graphics   -->
 </section>
