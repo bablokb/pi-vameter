@@ -20,10 +20,6 @@
       cache: false,
       url: "/results",
       success: function(data){
-        data.forEach(function(row) {
-          row.ts_start = (new Date(1000*row.ts_start)).toLocaleString();
-          row.ts_end   = (new Date(1000*row.ts_end)).toLocaleString();
-        });
         var table = $('#result_list').DataTable();
         table.clear();
         table.rows.add(data).draw();
@@ -40,9 +36,17 @@
             { data: "name",     title: "Name",
               className: "dt-left" },
             { data: "ts_start", title: "Start",
-              className: "dt-left" },
+              className: "dt-left",
+              render: function(data,type,raw,meta) {
+                        return (new Date(1000*data)).toLocaleString();
+                      }
+            },
             { data: "ts_end",   title: "End",
-              className: "dt-left" },
+              className: "dt-left",
+              render: function(data,type,raw,meta) {
+                        return (new Date(1000*data)).toLocaleString();
+                      }
+             },
             { data: "I_avg",    title: "I (mA) avg",
               className: "dt-right" },
             { data: "I_max",    title: "I (mA) max",
