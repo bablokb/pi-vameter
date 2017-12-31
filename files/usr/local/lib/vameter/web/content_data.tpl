@@ -28,6 +28,18 @@
      return false;
   };
 
+  getDelButton = function(name) {
+    var head =  '<img class = "w3-border" src="images/trash.png" alt="delete" onClick="doDelete(\'';
+    var end  =  '\')">';
+    return head + name + end;
+  };
+
+  getDldButton = function(name) {
+    var head =  '<img class = "w3-border" src="images/download.png" alt="download" onClick="doDownload(\'';
+    var end  =  '\')">';
+    return head + name + end;
+  };
+
   $(document).ready(function() {
       var table = $("#result_list").DataTable( {
         select: {style: 'single'},
@@ -60,7 +72,19 @@
             { data: "P_max",    title: "P (W) max",
               className: "dt-right" },
             { data: "P_tot",    title: "P (Wh) total",
-              className: "dt-right" }
+              className: "dt-right" },
+            { data: null,    title: "Del",
+              className: "dt-right",
+              render: function(data,type,raw,meta) {
+                   return getDelButton(data.name);
+              }
+             },
+            { data: null,    title: "Save",
+              className: "dt-right",
+              render: function(data,type,raw,meta) {
+                   return getDldButton(data.name);
+              }
+             },
         ]
       });
       get_results();
