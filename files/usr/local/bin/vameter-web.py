@@ -77,9 +77,12 @@ def get_webpath(path):
 
 @route('/css/<filepath:path>')
 def css_pages(filepath):
-    print(filepath)
     return bottle.static_file(filepath, root=get_webpath('css'))
   
+@route('/images/<filepath:path>')
+def images(filepath):
+    return bottle.static_file(filepath, root=get_webpath('images'))
+
 @route('/js/<filepath:path>')
 def js_pages(filepath):
     return bottle.static_file(filepath, root=get_webpath('js'))
@@ -116,6 +119,46 @@ def results():
     print("DEBUG: number of results: %d" % len(rows))
   bottle.response.content_type = 'application/json'
   return json.dumps(rows)
+
+# --- delete entry   --------------------------------------------------------
+
+@route('/delete',method='POST')
+def delete():
+  """ delete data """
+
+  global options
+  # get name-parameter
+  name = bottle.request.forms.get('name')
+
+  if options.debug:
+    print("DEBUG: processing delete (name: %s)" % name)
+
+  bottle.response.content_type = 'application/json'
+
+  # make sure we don't have fake input-data
+  words = name.split("/")
+  if len(words) > 1:
+    if options.debug:
+      print("DEBUG: slashes in %s: %d" % (f,len(words)))
+    msg = '"invalid argument"'
+    return '{"msg": ' + msg +'}'
+
+  # find and delete all matching files
+  count = 0
+  for suffix in ['.rrd','.summary','.xml','-I.png','-U.png','-P.png']:
+    f = os.path.join(options.data_root[0],"%s%s" % (name,suffix))
+    if options.debug:
+      print("DEBUG: checking %s" % f)
+    if os.path.exists(f):
+      count += 1
+      os.unlink(f);
+      if options.debug:
+        print("DEBUG: deleted %s" % f)
+
+  # return number of deleted files
+  msg = '"deleted %d files"' % count
+  print "DEBUG: count: %d, msg: %s" % (count,msg)
+  return '{"msg": ' + msg +'}'
 
 # --- start data collection   -----------------------------------------------
 
