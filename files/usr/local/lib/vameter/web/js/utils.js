@@ -70,6 +70,42 @@ doReboot=function() {
 };
 
 /**
+  Handle action delete
+*/
+
+doDelete=function(name) {
+  $.ajax({
+    type: "POST",
+        data : {name: name},
+    cache: false,
+    url: "/delete",
+    success: function(data){
+      showMsg(data.msg,3000);
+      get_results();
+    },
+    error: function(data){
+      showMsg(data.msg,3000);
+  },
+  });
+};
+
+/**
+  Handle action download
+*/
+
+doDownload=function(name) {
+  $.ajax({
+    type: "POST",
+        data : {name: name},
+    cache: false,
+    url: "/download",
+    success: function(data){
+      showMsg("Downloading " + name + " ...",2000);
+    }
+  });
+};
+
+/**
  * Handle author info.
  */
 
