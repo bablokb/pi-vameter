@@ -43,20 +43,28 @@
   $(document).ready(function() {
       var table = $("#result_list").DataTable( {
         select: {style: 'single'},
-        order: [[ 0, "asc" ]],
+        order: [[ 1, "desc" ]],
         columns: [
             { data: "name",     title: "Name",
               className: "dt-left" },
             { data: "ts_start", title: "Start",
               className: "dt-left",
               render: function(data,type,raw,meta) {
-                        return (new Date(1000*data)).toLocaleString();
+                        if (type === 'display') {
+                          return (new Date(1000*data)).toLocaleString();
+                        } else {
+                          return data;
+                        }
                       }
             },
             { data: "ts_end",   title: "End",
               className: "dt-left",
               render: function(data,type,raw,meta) {
-                        return (new Date(1000*data)).toLocaleString();
+                        if (type === 'display') {
+                          return (new Date(1000*data)).toLocaleString();
+                        } else {
+                          return data;
+                        }
                       }
              },
             { data: "I_avg",    title: "I (mA) avg",
