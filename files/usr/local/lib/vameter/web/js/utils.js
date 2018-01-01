@@ -46,9 +46,10 @@ doStart=function() {
 
 doStop=function() {
   $.post("/stop");
-  showMsg("Stopping data-collection ...",2000);
+  showMsg("Stopping data-collection ...",3000);
   $('#Start').show();
   $('#btnStop').hide();
+  setTimeout(function() { get_results();},3000);
 };
 
 /**
