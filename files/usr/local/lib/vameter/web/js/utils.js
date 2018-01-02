@@ -95,15 +95,7 @@ doDelete=function(name) {
 */
 
 doDownload=function(name) {
-  $.ajax({
-    type: "POST",
-        data : {name: name},
-    cache: false,
-    url: "/download",
-    success: function(data){
-      showMsg("Downloading " + name + " ...",2000);
-    }
-  });
+  window.location="/download?name="+name;
 };
 
 /**
