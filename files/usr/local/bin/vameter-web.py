@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
-# Simple web-interface for the results of pi-vameter.py 
+# Simple web-interface for the results of vameter.py
 #
 # Author: Bernhard Bablok
 # License: GPL3
@@ -120,6 +120,50 @@ def results():
   bottle.response.content_type = 'application/json'
   return json.dumps(rows)
 
+# --- download database   ---------------------------------------------------
+
+@route('/download',method='GET')
+def delete():
+  """ download data """
+
+  global options
+  # get name-parameter
+  name = bottle.request.query.get('name')
+
+  if options.debug:
+    print("DEBUG: processing delete (name: %s)" % name)
+
+  if name is None:
+    msg = '"missing argument"'
+    bottle.response.content_type = 'application/json'
+    bottle.response.status       = 400                 # bad request
+    return '{"msg": ' + msg +'}'
+
+  # make sure we don't have fake input-data
+  words = name.split(os.sep)
+  if len(words) > 1:
+    if options.debug:
+      print("DEBUG: separators in %s: %d" % (f,len(words)))
+    msg = '"invalid argument"'
+    bottle.response.content_type = 'application/json'
+    bottle.response.status       = 400                 # bad request
+    return '{"msg": ' + msg +'}'
+
+  # check if database file exists
+  f = os.path.join(options.data_root[0],"%s.rrd" % name)
+  if options.debug:
+    print("DEBUG: checking %s" % f)
+  if not os.path.exists(f):
+    msg = '"database does not exist"'
+    bottle.response.content_type = 'application/json'
+    bottle.response.status       = 404                # not found
+    return '{"msg": ' + msg +'}'
+
+  # convert to xml and download result
+  bottle.response.content_type = 'application/xml'
+  bottle.response.set_header('Content-Disposition','attachment; filename=%s.xml' % name)
+  return subprocess.check_output(['rrdtool','dump',f])
+
 # --- delete entry   --------------------------------------------------------
 
 @route('/delete',method='POST')
@@ -136,11 +180,12 @@ def delete():
   bottle.response.content_type = 'application/json'
 
   # make sure we don't have fake input-data
-  words = name.split("/")
+  words = name.split(os.sep)
   if len(words) > 1:
     if options.debug:
       print("DEBUG: slashes in %s: %d" % (f,len(words)))
     msg = '"invalid argument"'
+    bottle.response.status       = 400                 # bad request
     return '{"msg": ' + msg +'}'
 
   # find and delete all matching files
@@ -158,6 +203,7 @@ def delete():
   # return number of deleted files
   msg = '"deleted %d files"' % count
   print "DEBUG: count: %d, msg: %s" % (count,msg)
+  bottle.response.status = 200                 # OK
   return '{"msg": ' + msg +'}'
 
 # --- start data collection   -----------------------------------------------
@@ -173,7 +219,7 @@ def start():
   if options.debug:
     print("DEBUG: starting data collection (name: %s)" % name)
   args = [
-    os.path.join(options.pgm_dir,"pi-vameter.py"),
+    os.path.join(options.pgm_dir,"vameter.py"),
     "-D",
     options.data_root[0],
     "-g",
