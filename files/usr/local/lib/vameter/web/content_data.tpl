@@ -1,6 +1,6 @@
 <!--
 # ----------------------------------------------------------------------------
-# Simple web-interface for the results of pi-vameter.py 
+# Simple web-interface for the results of vameter.py
 #
 # This file defines the content area for data (table of available results)
 #

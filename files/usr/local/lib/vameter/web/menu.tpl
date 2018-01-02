@@ -1,6 +1,6 @@
 <!--
 # ----------------------------------------------------------------------------
-# Simple web-interface for the results of pi-vameter.py 
+# Simple web-interface for the results of vameter.py
 #
 # This file defines the navigation-menu
 #

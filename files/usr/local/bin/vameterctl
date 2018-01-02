@@ -63,10 +63,10 @@ setup_blink
 
 if [ -f "$BLINK_STATE" ]; then
   # program is running, stop it
-  killall "pi-vameter.py"
+  killall "vameter.py"
   stop_blink
 else
   # program is not running, start it in the background
-  su - "$VAMETER_USER" -c "pi-vameter.py -D /var/lib/vameter/data -g UIP -r" &
+  su - "$VAMETER_USER" -c "vameter.py -D /var/lib/vameter/data -g UIP -r" &
   start_blink &
 fi
