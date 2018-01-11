@@ -36,13 +36,13 @@ U_MAX         = 12.0        # max voltage
 A_MAX         = 5.0         # max current
 U_REF         = 3.3
 U_FAC         = 5.0/3.0     # this depends on the measurement-circuit
-U_RES         = U_REF/1024  # MCP3008 has 10-bit resolution
+U_RES         = U_REF/4096  # MCP3202 has 12-bit resolution
 
 I_SCALE       = 1000        # scale A to mA
 
 #ADC_BYTES     = [[1,128,0],[0,144,0]]    # MCP3008
-ADC_BYTES     = [[0,104,0],[0,120,0]]    # MCP3002
-#ADC_BYTES     = [[0,160,0],[0,224,0]]    # MCP3202
+#ADC_BYTES     = [[0,104,0],[0,120,0]]    # MCP3002
+ADC_BYTES     = [[0,160,0],[0,224,0]]    # MCP3202
 
 # Hall sensor
 U_CC       =   5.0    # Volt
