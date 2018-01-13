@@ -9,7 +9,7 @@
 #
 # --------------------------------------------------------------------------
 
-PACKAGES="python-spidev python-bottle python-rrdtool rrdtool"
+PACKAGES="python-spidev python-smbus python-bottle python-rrdtool rrdtool"
 PROJECT="pi-vameter"
 
 # --- basic packages   ------------------------------------------------------
@@ -52,7 +52,7 @@ install_files() {
     chown root:root "$target"
   done
 
-  chmod 755 "/usr/local/bin/$PROJECT.py"
+  chmod 755 "/usr/local/bin/vameter.py"
   chmod 755 "/usr/local/bin/vameterctl"
   chmod 644 "/etc/gpio-poll.conf"
 
@@ -74,6 +74,16 @@ configure_system() {
     echo "dtparam=spi=on" >> /boot/config.txt
     echo -e "[INFO] please reboot your system" 2>&1
   fi
+  if ! grep -q "^dtparam=i2c_arm=on" /boot/config.txt ; then
+    echo -e "[INFO] configuring i2c in /boot/config.txt" 2>&1
+    echo "dtparam=i2c_arm=on" >> /boot/config.txt
+  fi
+
+  # update /etc/modules
+  if ! grep -q "^i2c-dev" /etc/modules; then
+    echo -e "[INFO] configuring /etc/modules" 2>&1
+    echo "i2c-dev" >> /etc/modules
+  fi
 
   # create user
   if ! grep -q "vameter" /etc/passwd; then
@@ -83,7 +93,7 @@ configure_system() {
                                         --home /var/lib/vameter vameter
     usermod -a -G gpio,i2c,spi vameter
   fi
-  chown -R vameter:vameter /var/lib/vameter
+  chown -R vameter:vameter /var/lib/vameter /usr/local/lib/vameter
 }
 
 # --- activate service   ----------------------------------------------------
