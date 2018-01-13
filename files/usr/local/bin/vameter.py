@@ -11,6 +11,8 @@
 
 try:
   import spidev
+  import smbus
+  import lcddriver
   have_spi = True
 except:
   import math
@@ -23,7 +25,24 @@ from threading import Thread, Event, Lock
 import json
 import rrdtool
 
+# --- configuration   --------------------------------------------------------
+
+# please change constant ADC
+# if your ADC is not in ADC_VALUES, add it and submit a pull-request
+
+ADC = 'MCP3202'
+ADC_VALUES = {
+  'MCP3002': { 'CMD_BYTES': [[0,104,0],[0,120,0]], 'RESOLUTION': 10},
+  'MCP3008': { 'CMD_BYTES': [[1,128,0],[1,144,0]], 'RESOLUTION': 10},
+  'MCP3202': { 'CMD_BYTES': [[1,160,0],[1,224,0]], 'RESOLUTION': 12}
+  }
+
 # --- constants   ------------------------------------------------------------
+
+# derived values, don't change
+ADC_BYTES  = ADC_VALUES[ADC]['CMD_BYTES']
+ADC_RES    = 2**ADC_VALUES[ADC]['RESOLUTION']
+ADC_MASK   = 2**(ADC_VALUES[ADC]['RESOLUTION']-8) - 1
 
 TIMESTAMP_FMT = "%Y-%m-%d %H:%M:%S"
 INTERVAL      = 1
@@ -36,13 +55,10 @@ U_MAX         = 12.0        # max voltage
 A_MAX         = 5.0         # max current
 U_REF         = 3.3
 U_FAC         = 5.0/3.0     # this depends on the measurement-circuit
-U_RES         = U_REF/4096  # MCP3202 has 12-bit resolution
+U_RES         = U_REF/ADC_RES
 
 I_SCALE       = 1000        # scale A to mA
 
-#ADC_BYTES     = [[1,128,0],[0,144,0]]    # MCP3008
-#ADC_BYTES     = [[0,104,0],[0,120,0]]    # MCP3002
-ADC_BYTES     = [[0,160,0],[0,224,0]]    # MCP3202
 
 # Hall sensor
 U_CC       =   5.0    # Volt
@@ -50,10 +66,10 @@ CONV_VALUE =   0.185  # V/A      converter value
 
 # output format-templates
 LINE0 = "----------------------"
-LINE1 = "|   I(mA)  U(V)  P(W)|"
-LINE2 = "|{0} {1:4d}  {2:4.2f}  {3:4.2f}|"
-LINE3 = "|max{0:5d}  {1:4.2f}  {2:4.1f}|"
-LINE4 = "|tot {0:02d}:{1:02d}:{2:02d} {3:4.2f} Wh|"
+LINE1 = "   I(mA)  U(V)  P(W)"
+LINE2 = "{0} {1:4d}  {2:4.2f}  {3:4.2f}"
+LINE3 = "max{0:5d}  {1:4.2f}  {2:4.1f}"
+LINE4 = "tot {0:02d}:{1:02d}:{2:02d} {3:4.2f} Wh"
 
 # --- helper class for options   --------------------------------------------
 
@@ -103,18 +119,28 @@ def query_output_opts(options):
   """ query output options """
 
   if options.out_opt == "auto":
+    # check terminal
     try:
       have_term = os.getpgrp() == os.tcgetpgrp(sys.stdout.fileno())
     except:
       have_term = False
-    #TODO: query i2c for LCD-display
-    have_disp = False
+    # check 44780
+    try:
+      options.logger.msg("[debug] checking HD44780")
+      bus = smbus.SMBus(1)
+      bus.read_byte(0x27)
+      have_disp = True
+    except:
+      have_disp = False
+
     if have_term and have_disp:
       options.out_opt = "both"
+      options.lcd = lcddriver.lcd()
     elif have_term:
       options.out_opt = "term"
     elif have_disp:
       options.out_opt = "44780"
+      options.lcd = lcddriver.lcd()
     else:
       options.out_opt = "log"
 
@@ -141,8 +167,13 @@ def read_spi(channel,options):
       i = 0.5 + 0.5*math.cos(float(now))
       return (U_CC/2 - i*CONV_VALUE)/U_RES
   else:
-    data = options.spi.xfer(ADC_BYTES[channel])
-    return ((data[1]&3) << 8) + data[2]
+    cmd_bytes = list(ADC_BYTES[channel])       # use copy, since
+    data = options.spi.xfer(cmd_bytes)         # xfer changes the data
+    options.logger.msg("[debug] result xfer channel %d: %r" %
+                       (channel, str([bin(x) for x in data])))
+    options.logger.msg("[debug] result-bits: %r" %
+                       bin(((data[1]&ADC_MASK) << 8) + data[2]))
+    return ((data[1]&ADC_MASK) << 8) + data[2]
 
 # --- create database   ------------------------------------------------------
 
@@ -196,6 +227,14 @@ def convert_data(u_raw,ui_raw):
 
   return (u,i,p)
 
+# --- convert seconds to hh:mm:ss   ------------------------------------------
+
+def convert_secs(secs):
+  """ convert seconds to a readable representation """
+  m, s = divmod(secs,60)
+  h, m = divmod(m,60)
+  return (h,m,s)
+
 # --- display data   ---------------------------------------------------------
 
 def display_data(options,ts,u,i,p):
@@ -210,20 +249,21 @@ def display_data(options,ts,u,i,p):
                                              u,i,p))
     return
 
-  # convert secs to a readable representation
-  m, s = divmod(secs,60)
-  h, m = divmod(m,60)
+  (h,m,s) = convert_secs(secs)
 
   if options.out_opt == "term" or options.out_opt == "both":
     print("\033c")
     print(LINE0)
-    print(LINE1)
-    print(LINE2.format("now",int(i),u,p))
-    print(LINE3.format(int(i_max),u_max,p_max))
-    print(LINE4.format(h,m,s,p_sum/3600.0))
+    print("|%s|" % LINE1)
+    print("|%s|" % LINE2.format("now",int(i),u,p))
+    print("|%s|" % LINE3.format(int(i_max),u_max,p_max))
+    print("|%s|" % LINE4.format(h,m,s,p_sum/3600.0))
     print(LINE0)
   if options.out_opt == "44780" or options.out_opt == "both":
-    pass
+    options.lcd.lcd_display_string(LINE1, 1)
+    options.lcd.lcd_display_string(LINE2.format("now",int(i),u,p), 2)
+    options.lcd.lcd_display_string(LINE3.format(int(i_max),u_max,p_max), 3)
+    options.lcd.lcd_display_string(LINE4.format(h,m,s,p_sum/3600.0),4)
 
 # --- collect data   ---------------------------------------------------------
 
@@ -249,10 +289,12 @@ def collect_data(options):
     ts = datetime.datetime.now()
     u_raw  = read_spi(0,options)
     ui_raw = read_spi(1,options)
+
     if options.raw:
       (u,i,p) = (u_raw,ui_raw,u_raw*ui_raw)
     else:
       (u,i,p) = convert_data(u_raw,ui_raw)
+      options.logger.msg("[debug] converted data (u,i,p): %r,%r,%r" % (u,i,p))
 
     # show current data
     display_data(options,ts,u,i,p)
@@ -387,12 +429,13 @@ def print_summary(options):
   p_max = result_summary["P_max"]
   p_tot = result_summary["P_tot"]
   secs  = result_summary["ts_end"]-result_summary["ts_start"]+1
-  
+  (h,m,s) = convert_secs(secs)
+
   print(LINE0)
-  print(LINE1)
-  print(LINE2.format("avg",i_avg,u_avg,p_avg))
-  print(LINE3.format(i_max,u_max,p_max))
-  print(LINE4.format(secs,p_tot))
+  print("|%s|" % LINE1)
+  print("|%s|" % LINE2.format("avg",i_avg,u_avg,p_avg))
+  print("|%s|" % LINE3.format(i_max,u_max,p_max))
+  print("|%s|" % LINE4.format(h,m,s,p_tot))
   print(LINE0)
 
 # --- print data   -----------------------------------------------------------
@@ -588,6 +631,10 @@ if __name__ == '__main__':
 
   # collect data
   if options.do_run:
+    options.logger.msg("[debug] ADC: %s" % ADC)
+    options.logger.msg("[debug] ADC resolution: %s" % ADC_RES)
+    options.logger.msg("[debug] ADC command-bytes: %r" % ADC_BYTES)
+    options.logger.msg("[debug] ADC mask: %r" % bin(ADC_MASK))
     get_data(options)
 
   # we always create a summary if it does not yet exist
