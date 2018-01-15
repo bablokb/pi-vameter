@@ -24,11 +24,27 @@ check_packages() {
   return 1
 }
 
+get_new_packages() {
+  local p packages
+  for p in "$@"; do
+    echo -en "Checking $p ... " >&2
+    if dpkg -s "$p" 2>/dev/null | grep -q "Status.*ok"; then
+      echo "ok" >&2
+    else
+      echo "not installed" >&2
+      packages+=" $p"
+    fi
+  done
+  echo "$packages"
+}
+
 install_packages() {
-  if [ -n "$PACKAGES" ] && check_packages $PACKAGES; then
+  [ -z "$PACKAGES" ] && return
+  new_packages=$(get_new_packages $PACKAGES)
+  if [ -n "$new_packages" ]; then
     echo -e "[INFO] installing additional packages" 2>&1
     apt-get update
-    apt-get -y install $PACKAGES
+    apt-get -y --no-upgrade install $new_packages
   fi
 }
 
