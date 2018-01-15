@@ -1,0 +1,25 @@
+# --------------------------------------------------------------------------
+# Systemd service Definition for vameter-logo.service.
+#
+# The service starts the script /usr/local/bin/vameter-logo.py
+#
+# Author: Bernhard Bablok
+# License: GPL3
+#
+# Website: https://github.com/bablokb/pi-vameter
+#
+# --------------------------------------------------------------------------
+
+[Unit]
+Description=Display logo on display on startup
+After=multi-user.target
+ 
+[Service]
+Type=oneshot
+RemainAfterExit=true
+User=vameter
+ExecStart=/usr/local/bin/vameter-logo.py
+ExecStop=/usr/local/bin/vameter-logo.py
+
+[Install]
+WantedBy=multi-user.target
