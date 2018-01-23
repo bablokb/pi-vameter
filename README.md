@@ -34,6 +34,9 @@ Hall sensor the current induces a magnetic field, which in turn induces
 some voltage which we feed into the ADC's second channel. We therefore
 measure the current indirectly.
 
+The output-pins of the ADC are connected to the
+[SPI interface](doc/spi-pi-connection.gif "SPI connection) of the pi.
+
 
 The Display
 -----------
