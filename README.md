@@ -8,17 +8,27 @@ this circuit feeds it's measurement into the SPI-interface  of a (second) Pi,
 therefore you can record current, voltage and power over time.
 
 
+Status/News
+===========
+
+Jan 2018 Initial version
+------------------------
+
+The software is feature complete (but maybe not bug-free).
+
+
 Hardware
 ========
 
-The Circuit
------------
+The Module
+----------
 
-The circuit ![](doc/circuit.gif "circuit") mainly uses two components
+The module ![](doc/module.jpg "module") mainly uses two components
 
   - a ADC converter with at least two channels (e.g. MCP3002)
   - a Hall sensor
 
+(see  the [circuit](doc/circuit-module.gif "circuit") for details).
 The ADC will read the voltage on it's first channel directly. In the
 Hall sensor the current induces a magnetic field, which in turn induces
 some voltage which we feed into the ADC's second channel. We therefore
@@ -28,13 +38,23 @@ measure the current indirectly.
 The Display
 -----------
 
-The measurement software supports a LCD display with 4 rows and 20 columns
-attached to the I2C-interface of the Pi running the measurements. The display
-is not strictly necessary, since it only displays live data. The recording
-of the data is independent of the display.
+The measurement software supports a LCD display ![](doc/display.jpg "display")
+with 4 rows and 20 columns attached to the I2C-interface of the Pi running the
+measurements
+
+The display is not strictly necessary, since it only displays live data.
+The recording of the data is independent of the display.
 
 When the measurement is started from a terminal (e.g. using ssh), the
-live data is also displayed in the terminal.
+live data is also shown in the terminal.
+
+
+The button and LED
+------------------
+
+Optionally, you can attach a button and/or a LED to GPIOs. The installation
+defaults are GPIO23 for the button and GPIO18 for the LED. Using the button,
+you can start and stop recording data. During recording the LED will blink.
 
 
 Software
@@ -55,7 +75,8 @@ Installation
 ------------
 
 The installation assumes that you have a freshly installed
-Raspbian-Lite installation (Jessie and Stretch are fine).
+Raspbian-Jessie-Lite installation (there are still some open issues with
+the SPI-interface in Stretch).
 
 Use the following commands to install the software:
 
@@ -82,8 +103,10 @@ Besides the configuration of the GPIO for the start/stop-button you also
 have to check the script `/usr/local/bin/vameter.py`. Sadly, every ADC-converter
 needs it's special read commands and you have to configure the data
 for the ADC you are using. The script already contains some values for
-widely used ADCs (check variable `ADC_BYTES` at the beginning of the script).
-The variable contains two triplets, one for channel 0 and one for channel 1.
+widely used ADCs (check variables `ADC` and `ADC_VALUES` at the beginning
+of the script). If your ADC is already supported you just have to change
+the variable `ADC`. Otherwise, you have to add the values of your ADC to
+`ADC_VALUES` first (and submit a patch).
 
 
 The database
@@ -104,12 +127,17 @@ Script-based
 
 The command
 
-    vameter.py -g IUP mydata.rrd
+    vameter.py -h
 
-will start recording measurements and save the results in file `mydata.rrd`.
+will show a list of all available options. A typical use case is to
+start the data collection and create a set of graphs afterwards:
+
+    vameter.py -g IUP -r mydata.rrd
+
+This will start recording measurements and save the results in file `mydata.rrd`.
 To stop the data-collection, hit CTRL-C. Since we passed the option `-g IUP`,
 the script will generate after termination three graphics for current, voltage
-and power.
+and power (![](doc/cm1-LibreElec-I.png "CM1-LibreElec current")).
 
 You can use
 
@@ -117,3 +145,31 @@ You can use
 
 to print existing data.
 
+
+Button-based
+------------
+
+If you have attached a button to a GPIO and configured `/etc/gpio-poll.conf`
+accordingly, you can start and stop data collection with the button (no need
+to ssh to the system anymore).
+
+Data is automatically saved in the directory `/var/lib/vameter/data`. The
+database name is auto-generated from the start date and time.
+
+
+Web-based
+---------
+
+The project also installs small webserver using port 8026. If you point
+your browser to the address
+
+    http://ip-of-your-pi:8026/
+
+you will see the [webinterface](doc/web.png "webinterface") of the system.
+The buttons on the top will let you start (and stop) the data collection
+or will let you shutdown the system.
+
+The middle part shows all available measurements (from directory
+`/var/lib/vameter/data`) with some summary data. The bottom part
+will show a list of tabs to select a graphical representation of the
+current, voltage and power consumption during the measurement.
