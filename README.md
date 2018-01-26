@@ -168,9 +168,9 @@ your browser to the address
 
     http://ip-of-your-pi:8026/
 
-you will see the ![webinterface](doc/web.png "webinterface") of the system.
-The buttons on the top will let you start (and stop) the data collection
-or will let you shutdown the system.
+you will see the webinterface ![webinterface](doc/web.png "webinterface")
+of the system. The buttons on the top will let you start (and stop) the data
+collection or will let you shutdown the system.
 
 The middle part shows all available measurements (from directory
 `/var/lib/vameter/data`) with some summary data. The bottom part
