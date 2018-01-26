@@ -2,7 +2,7 @@ pi-vameter
 ==========
 
 This is a little circuit to measure current and voltage of a Raspberry Pi
-or other small computers using 5V input In contrast to ready to use
+or other small computers using 5V input. In contrast to ready to use
 USB-dongles which you just plug in between the power source and the consumer,
 this circuit feeds it's measurement into the SPI-interface  of a (second) Pi,
 therefore you can record current, voltage and power over time.
@@ -25,7 +25,7 @@ The Module
 
 The module ![](doc/module.jpg "module") mainly uses two components
 
-  - a ADC converter with at least two channels (e.g. MCP3002)
+  - an ADC converter with at least two channels (e.g. MCP3002)
   - a Hall sensor
 
 (see  the [circuit](doc/circuit-module.gif "circuit") for details).
@@ -35,7 +35,7 @@ some voltage which we feed into the ADC's second channel. We therefore
 measure the current indirectly.
 
 The output-pins of the ADC are connected to the
-[SPI interface](doc/spi-pi-connection.gif "SPI connection) of the pi.
+[SPI interface](doc/spi-pi-connection.gif "SPI connection") of the pi.
 
 
 The Display
@@ -43,7 +43,7 @@ The Display
 
 The measurement software supports a LCD display ![](doc/display.jpg "display")
 with 4 rows and 20 columns attached to the I2C-interface of the Pi running the
-measurements
+measurements.
 
 The display is not strictly necessary, since it only displays live data.
 The recording of the data is independent of the display.
@@ -140,7 +140,7 @@ start the data collection and create a set of graphs afterwards:
 This will start recording measurements and save the results in file `mydata.rrd`.
 To stop the data-collection, hit CTRL-C. Since we passed the option `-g IUP`,
 the script will generate after termination three graphics for current, voltage
-and power (![](doc/cm1-LibreElec-I.png "CM1-LibreElec current")).
+and power ![](doc/cm1-LibreElec-I.png "CM1-LibreElec current").
 
 You can use
 
@@ -168,7 +168,7 @@ your browser to the address
 
     http://ip-of-your-pi:8026/
 
-you will see the [webinterface](doc/web.png "webinterface") of the system.
+you will see the ![webinterface](doc/web.png "webinterface") of the system.
 The buttons on the top will let you start (and stop) the data collection
 or will let you shutdown the system.
 
