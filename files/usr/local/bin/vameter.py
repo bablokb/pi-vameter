@@ -152,6 +152,7 @@ def init_spi(simulate):
   if not simulate:
     spi = spidev.SpiDev()
     spi.open(0,0)
+    spi.max_speed_hz = 50000
     return spi
 
 # --- read SPI-bus   ---------------------------------------------------------
