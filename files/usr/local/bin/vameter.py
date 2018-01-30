@@ -51,7 +51,7 @@ KEEP_MIN      = 24          # number of hours to keep minute-data
 KEEP_HOUR     = 1           # number of month to keep hour-data
 KEEP_DAY      = 12          # number of month to keep day-data
 
-U_MAX         = 12.0        # max voltage
+U_MAX         = 5.6         # max voltage (technically 5.5 with some headroom)
 A_MAX         = 5.0         # max current
 U_REF         = 3.3
 U_FAC         = 5.0/3.0     # this depends on the measurement-circuit
