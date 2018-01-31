@@ -367,8 +367,12 @@ def sum_data(options):
     options.logger.msg("[info] creating summary-file: %s" % sumfile)
 
   # create summary
-  first = result_data[0][0]
-  last  = result_data[-1][0]
+  try:
+    first = result_data[0][0]
+    last  = result_data[-1][0]
+  except:
+    options.logger.msg("[error] no data in database: %s" % options.dbfile)
+    sys.exit(3)
 
   # extract avg and max values
   I_def = "DEF:I=%s:I:AVERAGE" %  options.dbfile
