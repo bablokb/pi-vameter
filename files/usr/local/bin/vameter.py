@@ -470,6 +470,8 @@ def graph_data(options):
   first = result_data[0][0]  - 5
   last  = result_data[-1][0] + 5
 
+  # query filename without path and extension for title
+  title = os.path.splitext(os.path.basename(options.dbfile))[0]
   for graph_type in options.do_graph:
     imgfile = os.path.splitext(options.dbfile)[0] + "-%s.png" % graph_type
     options.logger.msg("[info] creating image-file: %s" % imgfile)
@@ -508,7 +510,7 @@ def graph_data(options):
                 "--vertical-label=%s" % vlabel,
                 "--width", "800",
                 "--height", "400",
-                "--title", "Pi-VA-Meter",
+                "--title", title,
                 "--left-axis-format", "%6.2lf",
                 "--units-exponent", "0",
                 gdef,
