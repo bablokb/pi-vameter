@@ -46,10 +46,22 @@ with 4 rows and 20 columns attached to the I2C-interface of the Pi running the
 measurements.
 
 The display is not strictly necessary, since it only displays live data.
-The recording of the data is independent of the display.
+The recording of the data is independent of the display. When the measurement
+is started from a terminal (e.g. using ssh), the live data is also shown
+in the terminal.
 
-When the measurement is started from a terminal (e.g. using ssh), the
-live data is also shown in the terminal.
+To attach the LCD to the Pi, you at least need a parallel-to-serial adapter
+![](doc/i2c-converter.jpg "i2c-converter") for the LCD. Since most of the
+LCDs are targeted towards the Arduino-platform, they need 5V. So in
+addition you also need a level-converter to convert the 3.3V of the Pi to
+the 5V of the display.
+
+An alternative to the level converter is to manipulate the i2c-converter
+and to remove two resistors (labeled R8 and R9 in the above image). These
+resistors attach SDA and SCL to 5V.
+
+If unsure, you should read the tutorials on the net on how to use and
+attach an LCD to a Pi.
 
 
 The button and LED
@@ -58,6 +70,9 @@ The button and LED
 Optionally, you can attach a button and/or a LED to GPIOs. The installation
 defaults are GPIO23 for the button and GPIO18 for the LED. Using the button,
 you can start and stop recording data. During recording the LED will blink.
+
+Please read the tutorials on the internet on how to attach a button and a
+LED to a Raspberry Pi.
 
 
 Software
@@ -78,15 +93,17 @@ Installation
 ------------
 
 The installation assumes that you have a freshly installed
-Raspbian-Jessie-Lite installation (there are still some open issues with
-the SPI-interface in Stretch).
+Raspbian-Stretch-Lite installation.
 
 Use the following commands to install the software:
 
+    sudo apt-get update
+    sudo apt-get -y install git
     git clone https://github.com/bablokb/pi-vameter.git
     cd pi-vameter.git
     sudo tools/install
     cd ..
+
     git clone https://github.com/bablokb/gpio-poll-service.git
     cd gpio-poll-service
     sudo tools/install
@@ -146,8 +163,11 @@ You can use
 
     vameter.py -p mydata.rrd
 
-to print existing data.
+to print existing data and
 
+    vameter.py -S mydata.rrd
+
+to print a summary of the results.
 
 Button-based
 ------------
