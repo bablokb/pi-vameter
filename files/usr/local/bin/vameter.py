@@ -301,7 +301,9 @@ def collect_data(options):
     display_data(options,ts,u,i,p)
 
     # update database
-    rrdtool.update(options.dbfile,"%s:%f:%f:%f" % (ts.strftime("%s"),u,i,p))
+    if i >= options.limit:
+      rrdtool.update(options.dbfile,"%s:%f:%f:%f" % (ts.strftime("%s"),u,i,p))
+      options.limit = 0  # once above the limit, record everything
 
     # set poll_int small enough so that we hit the next interval boundry
     ms = datetime.datetime.now().microsecond
@@ -578,6 +580,10 @@ def get_parser():
   parser.add_argument('-R', '--raw', action='store_true',
     dest='raw', default=False,
     help='record raw ADC-values')
+  parser.add_argument('-T', '--trigger', nargs=1,
+    metavar='limit', default=0,
+    dest='limit', type=int,
+    help='start recording data as soon as current is larger than limit')
 
   parser.add_argument('-d', '--debug', metavar='debug-mode',
     dest='debug', default=False,
