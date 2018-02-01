@@ -436,12 +436,18 @@ def print_summary(options):
   secs  = result_summary["ts_end"]-result_summary["ts_start"]+1
   (h,m,s) = convert_secs(secs)
 
-  print(LINE0)
-  print("|%s|" % LINE1)
-  print("|%s|" % LINE2.format("avg",i_avg,u_avg,p_avg))
-  print("|%s|" % LINE3.format(i_max,u_max,p_max))
-  print("|%s|" % LINE4.format(h,m,s,p_tot))
-  print(LINE0)
+  if options.out_opt == "term" or options.out_opt == "both":
+    print(LINE0)
+    print("|%s|" % LINE1)
+    print("|%s|" % LINE2.format("avg",i_avg,u_avg,p_avg))
+    print("|%s|" % LINE3.format(i_max,u_max,p_max))
+    print("|%s|" % LINE4.format(h,m,s,p_tot))
+    print(LINE0)
+  if options.out_opt == "44780" or options.out_opt == "both":
+    options.lcd.lcd_display_string(LINE1, 1)
+    options.lcd.lcd_display_string(LINE2.format("avg",i_avg,u_avg,p_avg), 2)
+    options.lcd.lcd_display_string(LINE3.format(i_max,u_max,p_max), 3)
+    options.lcd.lcd_display_string(LINE4.format(h,m,s,p_tot),4)
 
 # --- print data   -----------------------------------------------------------
 
