@@ -57,12 +57,16 @@ def get_results():
     (name,ext) = os.path.splitext(f)
     if not ext == ".rrd":
       continue
-    item = get_values(os.path.join(data_root,f))
-    item['name'] = name
-    item['rrd'] = "/data/%s" % f
-    for m in ['I','U','P']:
-      item["%s_img" % m] = "/data/%s-%s.png" % (name,m)
-    results.append(item)
+    try:
+      item = get_values(os.path.join(data_root,f))
+      item['name'] = name
+      item['rrd'] = "/data/%s" % f
+      for m in ['I','U','P']:
+        item["%s_img" % m] = "/data/%s-%s.png" % (name,m)
+      results.append(item)
+    except:
+      # get_values fails if no summary-file is present - so ignore rrd
+      pass
   return results
 
 # --- query webroot   -------------------------------------------------------
