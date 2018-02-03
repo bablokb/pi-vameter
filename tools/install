@@ -105,8 +105,9 @@ configure_system() {
   if ! grep -q "vameter" /etc/passwd; then
     echo -e "[INFO] create system-user vameter:vameter" 2>&1
     groupadd -r vameter
-    adduser --disabled-login --gecos "" --system --group \
+    adduser --disabled-password --gecos "" --system --group \
                                         --home /var/lib/vameter vameter
+    sed -i -e "/vameter/s,/bin/false,/bin/bash," /etc/passwd
     usermod -a -G gpio,i2c,spi vameter
   fi
   chown -R vameter:vameter /var/lib/vameter /usr/local/lib/vameter
