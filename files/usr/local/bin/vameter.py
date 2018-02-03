@@ -281,6 +281,9 @@ def collect_data(options):
   p_max = 0.0
   p_sum = 0.0
 
+  # save start timestamp, since rrdtool does not record it
+  options.ts_start = 0
+
   # start at (near) full second
   ms       = datetime.datetime.now().microsecond
   poll_int = (1000000 - ms)/1000000.0
@@ -308,6 +311,8 @@ def collect_data(options):
         options.logger.msg("[info} starting to update DB")
         options.limit = 0  # once above the limit, record everything
       rrdtool.update(options.dbfile,"%s:%f:%f:%f" % (ts.strftime("%s"),u,i,p))
+      if options.ts_start == 0:
+        options.ts_start = ts
 
     # set poll_int small enough so that we hit the next interval boundry
     ms = datetime.datetime.now().microsecond
