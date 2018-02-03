@@ -118,29 +118,31 @@ class Msg(object):
 def query_output_opts(options):
   """ query output options """
 
-  if options.out_opt == "auto":
+  if options.out_opt == "auto" or options.out_opt == "term":
     # check terminal
     try:
       have_term = os.getpgrp() == os.tcgetpgrp(sys.stdout.fileno())
     except:
       have_term = False
+
+  if options.out_opt == "auto" or options.out_opt == "44780":
     # check 44780
     try:
       options.logger.msg("[debug] checking HD44780")
       bus = smbus.SMBus(1)
       bus.read_byte(0x27)
       have_disp = True
+      options.lcd = lcddriver.lcd()
     except:
       have_disp = False
 
+  if options.out_opt == "auto":
     if have_term and have_disp:
       options.out_opt = "both"
-      options.lcd = lcddriver.lcd()
     elif have_term:
       options.out_opt = "term"
     elif have_disp:
       options.out_opt = "44780"
-      options.lcd = lcddriver.lcd()
     else:
       options.out_opt = "log"
 
@@ -302,8 +304,10 @@ def collect_data(options):
 
     # update database
     if i >= options.limit:
+      if options.limit > 0:
+        options.logger.msg("[info} starting to update DB")
+        options.limit = 0  # once above the limit, record everything
       rrdtool.update(options.dbfile,"%s:%f:%f:%f" % (ts.strftime("%s"),u,i,p))
-      options.limit = 0  # once above the limit, record everything
 
     # set poll_int small enough so that we hit the next interval boundry
     ms = datetime.datetime.now().microsecond
@@ -581,8 +585,8 @@ def get_parser():
     dest='raw', default=False,
     help='record raw ADC-values')
   parser.add_argument('-T', '--trigger', nargs=1,
-    metavar='limit', default=0,
-    dest='limit', type=int,
+    metavar='limit', default=[0.0],
+    dest='limit', type=float,
     help='start recording data as soon as current is larger than limit')
 
   parser.add_argument('-d', '--debug', metavar='debug-mode',
@@ -628,6 +632,8 @@ def check_options(options):
   if not os.path.exists(options.dbfile) and not options.do_run:
       options.logger.msg("[error] database does not exist")
       sys.exit(3)
+
+  options.limit = options.limit[0]
 
   # without real hardware we just simulate
   options.simulate = options.simulate or not have_spi
