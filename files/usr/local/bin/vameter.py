@@ -281,8 +281,6 @@ def collect_data(options):
   p_max = 0.0
   p_sum = 0.0
 
-  # save start timestamp, since rrdtool does not record it
-  options.ts_start = 0
 
   # start at (near) full second
   ms       = datetime.datetime.now().microsecond
@@ -311,6 +309,8 @@ def collect_data(options):
         options.logger.msg("[info} starting to update DB")
         options.limit = 0  # once above the limit, record everything
       rrdtool.update(options.dbfile,"%s:%f:%f:%f" % (ts.strftime("%s"),u,i,p))
+
+      # save start timestamp, since rrdtool does not record it
       if options.ts_start == 0:
         options.ts_start = ts
 
@@ -347,8 +347,8 @@ def get_data(options):
 def fetch_data(options):
   """ fetch data and delete NaNs """
 
-  first = rrdtool.first(options.dbfile)
-  last  = rrdtool.last(options.dbfile)
+  first = options.summary["ts_start"]
+  last  = options.summary["ts_end"]
 
   time_span, titles, values = rrdtool.fetch(options.dbfile,"AVERAGE",
                                             "--start", str(first),
@@ -379,8 +379,12 @@ def sum_data(options):
 
   # create summary
   try:
-    first = result_data[0][0]
-    last  = result_data[-1][0]
+    if options.ts_start > 0:
+      first = options.ts_start
+    else:
+      # this should not happen, unless somebody deleted to summary file
+      first = rrdtool.first(options.dbfile)
+    last  = rrdtool.last(options.dbfile)
   except:
     options.logger.msg("[error] no data in database: %s" % options.dbfile)
     sys.exit(3)
@@ -436,15 +440,14 @@ def sum_data(options):
 def print_summary(options):
   """ print summary of collected data """
 
-  global result_summary
-  i_avg = result_summary["I_avg"]
-  u_avg = result_summary["U_avg"]
-  p_avg = result_summary["P_avg"]
-  i_max = result_summary["I_max"]
-  u_max = result_summary["U_max"]
-  p_max = result_summary["P_max"]
-  p_tot = result_summary["P_tot"]
-  secs  = result_summary["ts_end"]-result_summary["ts_start"]+1
+  i_avg = options.summary["I_avg"]
+  u_avg = options.summary["U_avg"]
+  p_avg = options.summary["P_avg"]
+  i_max = options.summary["I_max"]
+  u_max = options.summary["U_max"]
+  p_max = options.summary["P_max"]
+  p_tot = options.summary["P_tot"]
+  secs  = options.summary["ts_end"]-options.summary["ts_start"]+1
   (h,m,s) = convert_secs(secs)
 
   if options.out_opt == "term" or options.out_opt == "both":
@@ -465,6 +468,8 @@ def print_summary(options):
 def print_data(options):
   """ print collected data """
 
+  result_title,result_data = fetch_data(options)
+
   # print data
   for ts,(u,i,p) in result_data:
     ts = datetime.datetime.fromtimestamp(ts).strftime(TIMESTAMP_FMT)
@@ -484,8 +489,8 @@ def graph_data(options):
   """ create graphical representation of data """
 
   # extend first and last datapoint a bit for a nice graphical rep
-  first = result_data[0][0]  - 5
-  last  = result_data[-1][0] + 5
+  first = options.summary["ts_start"]  - 5
+  last  = options.summary["ts_end"]    + 5
 
   # query filename without path and extension for title
   title = os.path.splitext(os.path.basename(options.dbfile))[0]
@@ -638,7 +643,8 @@ def check_options(options):
       options.logger.msg("[error] database does not exist")
       sys.exit(3)
 
-  options.limit = options.limit[0]
+  options.limit    = options.limit[0]
+  options.ts_start = 0
 
   # without real hardware we just simulate
   options.simulate = options.simulate or not have_spi
@@ -668,8 +674,7 @@ if __name__ == '__main__':
     get_data(options)
 
   # we always create a summary if it does not yet exist
-  result_title,result_data = fetch_data(options)
-  result_summary           = sum_data(options)
+  options.summary = sum_data(options)
 
   # create output
   if options.do_print:
