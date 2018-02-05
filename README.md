@@ -93,7 +93,8 @@ Installation
 ------------
 
 The installation assumes that you have a freshly installed
-Raspbian-Stretch-Lite installation.
+Raspbian-Stretch-Lite installation (Jessie won't work since the
+version of rrdtools/python-rrdtools is too old on Jessie).
 
 Use the following commands to install the software:
 
