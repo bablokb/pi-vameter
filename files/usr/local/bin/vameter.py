@@ -262,6 +262,11 @@ def display_data(options,ts,u,i,p):
     options.logger.msg("INFO", "%s: %fV, %fmA, %fW" %
                        (ts.strftime(TIMESTAMP_FMT+".%f"),u,i,p))
     return
+  elif options.out_opt == "plain":
+    sys.stderr.write("%s: %fV, %fmA, %fW\n" %
+                       (ts.strftime(TIMESTAMP_FMT+".%f"),u,i,p))
+    sys.stderr.flush()
+    return
 
   (h,m,s) = convert_secs(secs)
 
