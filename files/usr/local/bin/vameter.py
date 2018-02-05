@@ -81,16 +81,24 @@ class Options(object):
 class Msg(object):
   """ Very basic message writer class """
 
+  MSG_LEVELS={
+    "TRACE":0,
+    "DEBUG":1,
+    "INFO":2,
+    "WARN":3,
+    "ERROR":4,
+    "NONE":5
+    }
+
   # --- constructor   --------------------------------------------------------
 
-  def __init__(self,debug):
+  def __init__(self,level):
     """ Constructor """
-    self._debug = debug
+    self._level = level
     self._lock = Lock()
     try:
       if os.getpgrp() == os.tcgetpgrp(sys.stdout.fileno()):
         self._syslog = False
-        self._debug  = True
       else:
         self._syslog = True
     except:
@@ -99,15 +107,18 @@ class Msg(object):
     if self._syslog:
       syslog.openlog("pi-vameter")
 
-  def msg(self,text):
-    """ write message to the system log """ 
-    if self._debug:
+  def msg(self,msg_level,text,nl=True):
+    """ write message to stderr or the system log """
+    if Msg.MSG_LEVELS[msg_level] >= Msg.MSG_LEVELS[self._level]:
+      now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+      text = "[%s] [%s] %s" % (msg_level,now,text)
+      if nl and not self._syslog:
+        text = text + "\n"
       with self._lock:
         if self._syslog:
           syslog.syslog(text)
         else:
           sys.stderr.write(text)
-          sys.stderr.write("\n")
           sys.stderr.flush()
 
 # ----------------------------------------------------------------------------
@@ -128,7 +139,7 @@ def query_output_opts(options):
   if options.out_opt == "auto" or options.out_opt == "44780":
     # check 44780
     try:
-      options.logger.msg("[debug] checking HD44780")
+      options.logger.msg("DEBUG", "checking HD44780")
       bus = smbus.SMBus(1)
       bus.read_byte(0x27)
       have_disp = True
@@ -172,9 +183,9 @@ def read_spi(channel,options):
   else:
     cmd_bytes = list(ADC_BYTES[channel])       # use copy, since
     data = options.spi.xfer(cmd_bytes)         # xfer changes the data
-    options.logger.msg("[debug] result xfer channel %d: %r" %
+    options.logger.msg("TRACE", "result xfer channel %d: %r" %
                        (channel, str([bin(x) for x in data])))
-    options.logger.msg("[debug] result-bits: %r" %
+    options.logger.msg("TRACE", "result-bits: %r" %
                        bin(((data[1]&ADC_MASK) << 8) + data[2]))
     return ((data[1]&ADC_MASK) << 8) + data[2]
 
@@ -184,7 +195,7 @@ def create_db(options):
   """ create RRD database """
 
   # create database with averages, minimums and maximums
-  options.logger.msg("[info] creating %s" % options.dbfile)
+  options.logger.msg("INFO", "creating %s" % options.dbfile)
   rrdtool.create(
     options.dbfile,
     "--start", "now",
@@ -248,8 +259,8 @@ def display_data(options,ts,u,i,p):
   if options.out_opt == "none":
     return
   elif options.out_opt == "log":
-    options.logger.msg("%s: %fV, %fmA, %fW" % (ts.strftime(TIMESTAMP_FMT+".%f"),
-                                             u,i,p))
+    options.logger.msg("INFO", "%s: %fV, %fmA, %fW" %
+                       (ts.strftime(TIMESTAMP_FMT+".%f"),u,i,p))
     return
 
   (h,m,s) = convert_secs(secs)
@@ -298,7 +309,7 @@ def collect_data(options):
       (u,i,p) = (u_raw,ui_raw,u_raw*ui_raw)
     else:
       (u,i,p) = convert_data(u_raw,ui_raw)
-      options.logger.msg("[debug] converted data (u,i,p): %r,%r,%r" % (u,i,p))
+      options.logger.msg("TRACE", "converted data (u,i,p): %r,%r,%r" % (u,i,p))
 
     # show current data
     display_data(options,ts,u,i,p)
@@ -306,7 +317,7 @@ def collect_data(options):
     # update database
     if i >= options.limit:
       if options.limit > 0:
-        options.logger.msg("[info} starting to update DB")
+        options.logger.msg("INFO", "starting to update DB")
         options.limit = 0  # once above the limit, record everything
       rrdtool.update(options.dbfile,"%s:%f:%f:%f" % (ts.strftime("%s"),u,i,p))
 
@@ -331,14 +342,14 @@ def get_data(options):
   options.stop_event  = Event()
   options.spi = init_spi(options.simulate)
   data_thread = Thread(target=collect_data,args=(options,))
-  options.logger.msg("[info] starting data-collection")
+  options.logger.msg("INFO", "starting data-collection")
   data_thread.start()
 
   # wait for signal
   signal.pause()
 
   # stop data-collection
-  options.logger.msg("[info] terminating data-collection")
+  options.logger.msg("INFO", "terminating data-collection")
   options.stop_event.set()
   data_thread.join()
 
@@ -375,7 +386,7 @@ def sum_data(options):
     f.close()
     return result
   else:
-    options.logger.msg("[info] creating summary-file: %s" % sumfile)
+    options.logger.msg("INFO", "creating summary-file: %s" % sumfile)
 
   # create summary
   try:
@@ -386,7 +397,7 @@ def sum_data(options):
       first = rrdtool.first(options.dbfile)
     last  = rrdtool.last(options.dbfile)
   except:
-    options.logger.msg("[error] no data in database: %s" % options.dbfile)
+    options.logger.msg("ERROR", "no data in database: %s" % options.dbfile)
     sys.exit(3)
 
   # extract avg and max values
@@ -496,7 +507,7 @@ def graph_data(options):
   title = os.path.splitext(os.path.basename(options.dbfile))[0]
   for graph_type in options.do_graph:
     imgfile = os.path.splitext(options.dbfile)[0] + "-%s.png" % graph_type
-    options.logger.msg("[info] creating image-file: %s" % imgfile)
+    options.logger.msg("INFO", "creating image-file: %s" % imgfile)
 
     gdef     = "DEF:%s=%s:%s:AVERAGE" %  (graph_type,options.dbfile,graph_type)
     vdef_avg = "VDEF:%savg=%s,AVERAGE" % (graph_type,graph_type)
@@ -555,7 +566,7 @@ def signal_handler(_signo, _stack_frame):
   """ Signal-handler to cleanup threads """
 
   global data_thread, options
-  options.logger.msg("interrupt %d detected, exiting" % _signo)
+  options.logger.msg("DEBUG", "interrupt %d detected, exiting" % _signo)
   return
 
 # --- cmdline-parser   ------------------------------------------------------
@@ -589,8 +600,8 @@ def get_parser():
 
   parser.add_argument('-O', '--output', nargs='?',
     metavar='opt', default='auto', const="auto",
-    dest='out_opt',
-    help='output-mode for measurements (auto|44780|term|both|log|none)')
+    dest='out_opt', choices=["auto","44780","term","both","plain","log","none"],
+    help='output-mode for measurements: one of auto, 44780, term, both, plain, log, none)')
   parser.add_argument('-R', '--raw', action='store_true',
     dest='raw', default=False,
     help='record raw ADC-values')
@@ -599,9 +610,10 @@ def get_parser():
     dest='limit', type=float,
     help='start recording data as soon as current is larger than limit')
 
-  parser.add_argument('-d', '--debug', metavar='debug-mode',
-    dest='debug', default=False,
-    help='start in debug-mode')
+  parser.add_argument('-l', '--level', dest='level', default='INFO',
+                      metavar='debug-level',
+                      choices=['NONE','ERROR','WARN','INFO','DEBUG','TRACE'],
+    help='debug level: one of NONE, ERROR, WARN, INFO, DEBUG, TRACE')
   parser.add_argument('-s', '--simulate', metavar='simulate',
     dest='simulate', default=False,
     help='simulate reads from ADC')
@@ -618,14 +630,14 @@ def check_options(options):
   """ validate and fix options """
 
   # add logger
-  options.logger   = Msg(options.debug)
+  options.logger   = Msg(options.level)
 
   # default database
   if not options.dbfile:
     now            = datetime.datetime.now()
     fname          = now.strftime("%Y%m%d_%H%M%S.rrd")
     options.dbfile = os.path.join(options.target_dir[0],fname)
-  options.logger.msg("[info] Database-file: %s" % options.dbfile)
+  options.logger.msg("INFO", "Database-file: %s" % options.dbfile)
 
   # set run-mode as default
   if not options.do_graph and not options.do_print and not options.do_sum:
@@ -637,10 +649,10 @@ def check_options(options):
 
   # check if we need to create the database
   if not os.path.exists(options.dbfile) and options.do_notcreate:
-      options.logger.msg("[error] database does not exist")
+      options.logger.msg("ERROR", "database does not exist")
       sys.exit(3)
   if not os.path.exists(options.dbfile) and not options.do_run:
-      options.logger.msg("[error] database does not exist")
+      options.logger.msg("ERROR", "database does not exist")
       sys.exit(3)
 
   options.limit    = options.limit[0]
@@ -648,14 +660,14 @@ def check_options(options):
 
   # without real hardware we just simulate
   options.simulate = options.simulate or not have_spi
-  options.logger.msg("[info] simulation-mode: %r" % options.simulate)
+  options.logger.msg("INFO", "simulation-mode: %r" % options.simulate)
 
 # --- main program   ---------------------------------------------------------
 
 if __name__ == '__main__':
   # parse commandline-arguments
-  opt_parser = get_parser()
-  options    = opt_parser.parse_args(namespace=Options)
+  opt_parser     = get_parser()
+  options        = opt_parser.parse_args(namespace=Options)
   check_options(options)
 
   # query output options
@@ -667,10 +679,10 @@ if __name__ == '__main__':
 
   # collect data
   if options.do_run:
-    options.logger.msg("[debug] ADC: %s" % ADC)
-    options.logger.msg("[debug] ADC resolution: %s" % ADC_RES)
-    options.logger.msg("[debug] ADC command-bytes: %r" % ADC_BYTES)
-    options.logger.msg("[debug] ADC mask: %r" % bin(ADC_MASK))
+    options.logger.msg("DEBUG", "ADC: %s" % ADC)
+    options.logger.msg("DEBUG", "ADC resolution: %s" % ADC_RES)
+    options.logger.msg("DEBUG", "ADC command-bytes: %r" % ADC_BYTES)
+    options.logger.msg("DEBUG", "ADC mask: %r" % bin(ADC_MASK))
     get_data(options)
 
   # we always create a summary if it does not yet exist
