@@ -18,7 +18,7 @@ except:
   import math
   have_spi = False
 
-import os, sys, signal, signal, time, datetime
+import os, sys, signal, signal, time, datetime, traceback
 import subprocess, syslog
 from argparse import ArgumentParser
 from threading import Thread, Event, Lock
@@ -322,13 +322,13 @@ def collect_data(options):
     # update database
     if i >= options.limit:
       if options.limit > 0:
-        options.logger.msg("INFO", "starting to update DB")
         options.limit = 0  # once above the limit, record everything
       rrdtool.update(options.dbfile,"%s:%f:%f:%f" % (ts.strftime("%s"),u,i,p))
 
       # save start timestamp, since rrdtool does not record it
       if options.ts_start == 0:
-        options.ts_start = ts
+        options.logger.msg("INFO", "starting to update DB")
+        options.ts_start = int(ts.strftime("%s"))
 
     # set poll_int small enough so that we hit the next interval boundry
     ms = datetime.datetime.now().microsecond
@@ -401,7 +401,8 @@ def sum_data(options):
       # this should not happen, unless somebody deleted to summary file
       first = rrdtool.first(options.dbfile)
     last  = rrdtool.last(options.dbfile)
-  except:
+  except Exception as e:
+    options.logger.msg("TRACE", traceback.format_exc())
     options.logger.msg("ERROR", "no data in database: %s" % options.dbfile)
     sys.exit(3)
 
@@ -661,6 +662,7 @@ def check_options(options):
       sys.exit(3)
 
   options.limit    = options.limit[0]
+  options.logger.msg("DEBUG", "limit: %f" % options.limit)
   options.ts_start = 0
 
   # without real hardware we just simulate
