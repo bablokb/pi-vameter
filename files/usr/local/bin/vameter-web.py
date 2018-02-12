@@ -114,12 +114,6 @@ def results():
   rows = get_results()
   if options.debug:
     print("DEBUG: rows: %r" % rows)
-  if not rows:
-    if options.debug:
-      print("DEBUG: no results available")
-    return "{}"
-
-  if options.debug:
     print("DEBUG: number of results: %d" % len(rows))
   bottle.response.content_type = 'application/json'
   return json.dumps(rows)
