@@ -28,7 +28,12 @@ The module ![](doc/module.jpg "module") mainly uses two components
   - an ADC converter with at least two channels (e.g. MCP3002)
   - a Hall sensor
 
-(see  the [circuit](doc/circuit-module.gif "circuit") for details).
+Ssee  the [circuit](doc/circuit-module.gif "circuit") for details,
+also available are a top and bottom view of the circuit:
+
+  - [top view](doc/module-topview.gif "top view")
+  - [bottom view](doc/module-bottomview.gif "bottom view")
+
 The ADC will read the voltage on it's first channel directly. In the
 Hall sensor the current induces a magnetic field, which in turn induces
 some voltage which we feed into the ADC's second channel. We therefore
@@ -58,7 +63,8 @@ the 5V of the display.
 
 An alternative to the level converter is to manipulate the i2c-converter
 and to remove two resistors (labeled R8 and R9 in the above image). These
-resistors attach SDA and SCL to 5V.
+resistors attach SDA and SCL to 5V. In the image you can see the R9
+already removed and the R8 is partially off.
 
 If unsure, you should read the tutorials on the net on how to use and
 attach an LCD to a Pi.
