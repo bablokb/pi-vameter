@@ -262,7 +262,7 @@ def display_data(options,ts,u,i,p):
                        (ts.strftime(TIMESTAMP_FMT+".%f"),u,i,p))
     return
   elif options.out_opt == "plain":
-    sys.stderr.write("%s: %fV, %fmA, %fW\n" %
+    sys.stderr.write("%s: %4.2fV, %6.1fmA, %5.2fW\n" %
                        (ts.strftime(TIMESTAMP_FMT+".%f"),u,i,p))
     sys.stderr.flush()
     return
@@ -344,18 +344,18 @@ def save_and_display(options,ts,u_samp,ui_samp):
   # calculate values and log statistics
   u_raw   = statistics.mean(u_samp)
   ui_raw  = statistics.mean(ui_samp)
-  options.logger.msg("DEBUG", "u_raw   mean: %4d" % u_raw)
-  options.logger.msg("DEBUG", "ui_raw  mean: %4d" % ui_raw)
+  options.logger.msg("DEBUG", "u_raw   mean: %5d" % u_raw)
+  options.logger.msg("DEBUG", "i_raw   mean: %5d" % ui_raw)
 
   # since calculation of statistics is expensive, check level
   if options.level == "TRACE":
-    options.logger.msg("TRACE", "u_raw median: %4d" %
+    options.logger.msg("TRACE", "u_raw median: %5d" %
                               statistics.median(u_samp))
-    options.logger.msg("TRACE", "u_raw median: %4d" %
+    options.logger.msg("TRACE", "i_raw median: %5d" %
                               statistics.median(ui_samp))
-    options.logger.msg("TRACE", "u_raw  sigma: %7.2f" %
+    options.logger.msg("TRACE", "u_raw  sigma: %5.2f" %
                               statistics.stdev(u_samp,u_raw))
-    options.logger.msg("TRACE", "u_raw  sigma: %7.2f" %
+    options.logger.msg("TRACE", "i_raw  sigma: %5.2f" %
                               statistics.stdev(ui_samp,ui_raw))
 
   # convert values
