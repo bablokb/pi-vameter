@@ -91,17 +91,11 @@ class Msg(object):
 
   # --- constructor   --------------------------------------------------------
 
-  def __init__(self,level):
+  def __init__(self,level,sysl):
     """ Constructor """
     self._level = level
+    self._syslog = sysl
     self._lock = Lock()
-    try:
-      if os.getpgrp() == os.tcgetpgrp(sys.stdout.fileno()):
-        self._syslog = False
-      else:
-        self._syslog = True
-    except:
-      self._syslog = True
 
     if self._syslog:
       syslog.openlog("pi-vameter")
@@ -653,6 +647,7 @@ def get_parser():
     metavar='opt', default='auto', const="auto",
     dest='out_opt', choices=["auto","44780","term","both","plain","log","none"],
     help='output-mode for measurements: one of auto, 44780, term, both, plain, log, none)')
+
   parser.add_argument('-R', '--raw', action='store_true',
     dest='raw', default=False,
     help='record raw ADC-values')
@@ -665,6 +660,10 @@ def get_parser():
                       metavar='debug-level',
                       choices=['NONE','ERROR','WARN','INFO','DEBUG','TRACE'],
     help='debug level: one of NONE, ERROR, WARN, INFO, DEBUG, TRACE')
+  parser.add_argument('-y', '--syslog', action='store_true',
+    dest='syslog',
+    help='log to syslog')
+
   parser.add_argument('-s', '--simulate', metavar='simulate',
     dest='simulate', default=False,
     help='simulate reads from ADC')
@@ -681,7 +680,7 @@ def check_options(options):
   """ validate and fix options """
 
   # add logger
-  options.logger   = Msg(options.level)
+  options.logger   = Msg(options.level,options.syslog)
 
   # default database
   if not options.dbfile:
