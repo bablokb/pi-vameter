@@ -9,7 +9,7 @@
 #
 # --------------------------------------------------------------------------
 
-PACKAGES="python-spidev python-smbus python-bottle python-rrdtool rrdtool"
+PACKAGES="python-pip python-spidev python-smbus python-bottle python-rrdtool rrdtool"
 PROJECT="pi-vameter"
 
 # --- basic packages   ------------------------------------------------------
@@ -39,13 +39,17 @@ get_new_packages() {
 }
 
 install_packages() {
-  [ -z "$PACKAGES" ] && return
   new_packages=$(get_new_packages $PACKAGES)
   if [ -n "$new_packages" ]; then
     echo -e "[INFO] installing additional packages" 2>&1
     apt-get update
     apt-get -y --no-upgrade install $new_packages
   fi
+
+  # install statistics package
+  pip2 --disable-pip-version-check list 2>/dev/null | \
+         grep -q statistics || \
+            pip2 --disable-pip-version-check install statistics
 }
 
 # --- install specific files   ----------------------------------------------
@@ -127,6 +131,7 @@ enable_services() {
 # --- main program   --------------------------------------------------------
 
 install_packages
+
 install_files
 configure_system
 enable_services
