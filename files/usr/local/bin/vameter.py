@@ -22,8 +22,7 @@ import os, sys, signal, signal, time, datetime, traceback
 import subprocess, syslog
 from argparse import ArgumentParser
 from threading import Thread, Event, Lock
-import json
-import rrdtool
+import json, rrdtool, statistics
 
 # --- configuration   --------------------------------------------------------
 
@@ -176,10 +175,10 @@ def read_spi(channel,options):
   if options.simulate:
     now = datetime.datetime.now().strftime("%s")
     if channel == 0:
-      return (5 + 0.5*math.sin(float(now)))/(U_RES*U_FAC)
+      return int((5 + 0.5*math.sin(float(now)))/(U_RES*U_FAC))
     else:
       i = 0.5 + 0.5*math.cos(float(now))
-      return (U_CC/2 - i*CONV_VALUE)/U_RES
+      return int((U_CC/2 - i*CONV_VALUE)/U_RES)
   else:
     cmd_bytes = list(ADC_BYTES[channel])       # use copy, since
     data = options.spi.xfer(cmd_bytes)         # xfer changes the data
@@ -297,6 +296,9 @@ def collect_data(options):
   p_max = 0.0
   p_sum = 0.0
 
+  # sample accumulators
+  u_samp = []
+  ui_samp = []
 
   # start at (near) full second
   ms       = datetime.datetime.now().microsecond
@@ -305,34 +307,77 @@ def collect_data(options):
     if options.stop_event.wait(poll_int):
       break
 
-    # read values of voltage and current from ADC
-    ts = datetime.datetime.now()
-    u_raw  = read_spi(0,options)
-    ui_raw = read_spi(1,options)
+    # read timestamp and values of voltage and current from ADC
+    ts      = datetime.datetime.now()
+    ts_save = ts + (
+              datetime.timedelta(seconds=INTERVAL,milliseconds=-10))
 
-    if options.raw:
-      (u,i,p) = (u_raw,ui_raw,u_raw*ui_raw)
-    else:
-      (u,i,p) = convert_data(u_raw,ui_raw)
-      options.logger.msg("TRACE", "converted data (u,i,p): %r,%r,%r" % (u,i,p))
+    # read and save raw values
+    while ts < ts_save:
+      u_samp.append(read_spi(0,options))
+      ui_samp.append(read_spi(1,options))
+      time.sleep(0.01)
+      ts = datetime.datetime.now()
+    u_samp.append(read_spi(0,options))
+    ui_samp.append(read_spi(1,options))
 
-    # show current data
-    display_data(options,ts,u,i,p)
+    # save values
+    options.logger.msg("DEBUG", "sample-size: %d" % len(u_samp))
+    save_and_display(options,ts,u_samp,ui_samp)
 
-    # update database
-    if i >= options.limit:
-      if options.limit > 0:
-        options.limit = 0  # once above the limit, record everything
-      rrdtool.update(options.dbfile,"%s:%f:%f:%f" % (ts.strftime("%s"),u,i,p))
-
-      # save start timestamp, since rrdtool does not record it
-      if options.ts_start == 0:
-        options.logger.msg("INFO", "starting to update DB")
-        options.ts_start = int(ts.strftime("%s"))
+    # reset accumulators
+    u_samp  = []
+    ui_samp = []
 
     # set poll_int small enough so that we hit the next interval boundry
     ms = datetime.datetime.now().microsecond
-    poll_int = INTERVAL - 1 + (1000000 - ms)/1000000.0
+    poll_int = (INTERVAL - 1 + (1000000 - ms)/1000000.0)/100.0
+
+# --- save and display data   ------------------------------------------------
+
+def save_and_display(options,ts,u_samp,ui_samp):
+  """ save and display data """
+
+  options.logger.msg("TRACE", "sample u_raw: %r" % (u_samp,))
+  options.logger.msg("TRACE", "sample ui_raw: %r" % (ui_samp,))
+
+  # calculate values and log statistics
+  u_raw   = statistics.mean(u_samp)
+  ui_raw  = statistics.mean(ui_samp)
+  options.logger.msg("DEBUG", "u_raw   mean: %4d" % u_raw)
+  options.logger.msg("DEBUG", "ui_raw  mean: %4d" % ui_raw)
+
+  # since calculation of statistics is expensive, check level
+  if options.level == "TRACE":
+    options.logger.msg("TRACE", "u_raw median: %4d" %
+                              statistics.median(u_samp))
+    options.logger.msg("TRACE", "u_raw median: %4d" %
+                              statistics.median(ui_samp))
+    options.logger.msg("TRACE", "u_raw  sigma: %7.2f" %
+                              statistics.stdev(u_samp,u_raw))
+    options.logger.msg("TRACE", "u_raw  sigma: %7.2f" %
+                              statistics.stdev(ui_samp,ui_raw))
+
+  # convert values
+  if options.raw:
+    (U,I,P) = (u_raw,ui_raw,u_raw*ui_raw)
+  else:
+    (U,I,P) = convert_data(u_raw,ui_raw)
+    options.logger.msg("TRACE", "converted data (U,I,P): %4.2f,%6.1f,%5.2f" % (U,I,P))
+
+  # show current data
+  display_data(options,ts,U,I,P)
+
+  # update database
+  if I >= options.limit:
+    if options.limit > 0:
+      options.limit = 0  # once above the limit, record everything
+    rrdtool.update(options.dbfile,"%s:%f:%f:%f" % (ts.strftime("%s"),U,I,P))
+
+    # save start timestamp, since rrdtool does not record it
+    if options.ts_start == 0:
+      options.logger.msg("INFO", "starting to update DB")
+      options.ts_start = int(ts.strftime("%s"))
 
 # --- collect data   ---------------------------------------------------------
 
