@@ -11,7 +11,7 @@ therefore you can record current, voltage and power over time.
 Status/News
 ===========
 
-Jan 2018 Initial version
+Feb 2018 Initial version
 ------------------------
 
 The software is feature complete (but maybe not bug-free).
@@ -23,12 +23,13 @@ Hardware
 The Module
 ----------
 
-The module ![](doc/module.jpg "module") mainly uses two components
+The module ![](doc/module.jpg "module") designed and created by Lothar Hiller
+mainly uses two components
 
   - an ADC converter with at least two channels (e.g. MCP3002)
   - a Hall sensor
 
-Ssee  the [circuit](doc/circuit-module.gif "circuit") for details,
+See  the [circuit](doc/circuit-module.gif "circuit") for details,
 also available are a top and bottom view of the circuit:
 
   - [top view](doc/module-topview.gif "top view")
@@ -41,6 +42,9 @@ measure the current indirectly.
 
 The output-pins of the ADC are connected to the
 [SPI interface](doc/spi-pi-connection.gif "SPI connection") of the pi.
+
+Note that there is no sophisticated filtering of noise in hardware. The
+software takes care of this using oversampling.
 
 
 The Display
