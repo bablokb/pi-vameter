@@ -107,12 +107,15 @@ class Msg(object):
       text = "[%s] [%s] %s" % (msg_level,now,text)
       if nl and not self._syslog:
         text = text + "\n"
-      with self._lock:
-        if self._syslog:
-          syslog.syslog(text)
-        else:
-          sys.stderr.write(text)
-          sys.stderr.flush()
+      try:
+        with self._lock:
+          if self._syslog:
+            syslog.syslog(text)
+          else:
+            sys.stderr.write(text)
+            sys.stderr.flush()
+      except:
+        pass
 
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
@@ -256,26 +259,32 @@ def display_data(options,ts,u,i,p):
                        (ts.strftime(TIMESTAMP_FMT+".%f"),u,i,p))
     return
   elif options.out_opt == "plain":
-    sys.stderr.write("%s: %4.2fV, %6.1fmA, %5.2fW\n" %
+    try:
+      sys.stderr.write("%s: %4.2fV, %6.1fmA, %5.2fW\n" %
                        (ts.strftime(TIMESTAMP_FMT+".%f"),u,i,p))
-    sys.stderr.flush()
+      sys.stderr.flush()
+    except:
+      pass
     return
 
   (h,m,s) = convert_secs(secs)
 
-  if options.out_opt == "term" or options.out_opt == "both":
-    print("\033c")
-    print(LINE0)
-    print("|%s|" % LINE1)
-    print("|%s|" % LINE2.format("now",int(i),u,p))
-    print("|%s|" % LINE3.format(int(i_max),u_max,p_max))
-    print("|%s|" % LINE4.format(h,m,s,p_sum/3600.0))
-    print(LINE0)
-  if options.out_opt == "44780" or options.out_opt == "both":
-    options.lcd.lcd_display_string(LINE1, 1)
-    options.lcd.lcd_display_string(LINE2.format("now",int(i),u,p), 2)
-    options.lcd.lcd_display_string(LINE3.format(int(i_max),u_max,p_max), 3)
-    options.lcd.lcd_display_string(LINE4.format(h,m,s,p_sum/3600.0),4)
+  try:
+    if options.out_opt == "term" or options.out_opt == "both":
+      print("\033c")
+      print(LINE0)
+      print("|%s|" % LINE1)
+      print("|%s|" % LINE2.format("now",int(i),u,p))
+      print("|%s|" % LINE3.format(int(i_max),u_max,p_max))
+      print("|%s|" % LINE4.format(h,m,s,p_sum/3600.0))
+      print(LINE0)
+    if options.out_opt == "44780" or options.out_opt == "both":
+      options.lcd.lcd_display_string(LINE1, 1)
+      options.lcd.lcd_display_string(LINE2.format("now",int(i),u,p), 2)
+      options.lcd.lcd_display_string(LINE3.format(int(i_max),u_max,p_max), 3)
+      options.lcd.lcd_display_string(LINE4.format(h,m,s,p_sum/3600.0),4)
+  except:
+    pass
 
 # --- collect data   ---------------------------------------------------------
 
@@ -506,18 +515,21 @@ def print_summary(options):
   secs  = options.summary["ts_end"]-options.summary["ts_start"]+1
   (h,m,s) = convert_secs(secs)
 
-  if options.out_opt == "term" or options.out_opt == "both":
-    print(LINE0)
-    print("|%s|" % LINE1)
-    print("|%s|" % LINE2.format("avg",i_avg,u_avg,p_avg))
-    print("|%s|" % LINE3.format(i_max,u_max,p_max))
-    print("|%s|" % LINE4.format(h,m,s,p_tot))
-    print(LINE0)
-  if options.out_opt == "44780" or options.out_opt == "both":
-    options.lcd.lcd_display_string(LINE1, 1)
-    options.lcd.lcd_display_string(LINE2.format("avg",i_avg,u_avg,p_avg), 2)
-    options.lcd.lcd_display_string(LINE3.format(i_max,u_max,p_max), 3)
-    options.lcd.lcd_display_string(LINE4.format(h,m,s,p_tot),4)
+  try:
+    if options.out_opt == "term" or options.out_opt == "both":
+      print(LINE0)
+      print("|%s|" % LINE1)
+      print("|%s|" % LINE2.format("avg",i_avg,u_avg,p_avg))
+      print("|%s|" % LINE3.format(i_max,u_max,p_max))
+      print("|%s|" % LINE4.format(h,m,s,p_tot))
+      print(LINE0)
+    if options.out_opt == "44780" or options.out_opt == "both":
+      options.lcd.lcd_display_string(LINE1, 1)
+      options.lcd.lcd_display_string(LINE2.format("avg",i_avg,u_avg,p_avg), 2)
+      options.lcd.lcd_display_string(LINE3.format(i_max,u_max,p_max), 3)
+      options.lcd.lcd_display_string(LINE4.format(h,m,s,p_tot),4)
+  except:
+    pass
 
 # --- print data   -----------------------------------------------------------
 
@@ -527,17 +539,21 @@ def print_data(options):
   result_title,result_data = fetch_data(options)
 
   # print data
+  if I_SCALE == 1000:
+    # we display mA
+    format = "%s: %s=%4.2fV, %s=%4.0fmA, %s=%4.2fW"
+  else:
+    format = "%s: %s=%6.4fV, %s=%6.3fA, %s=%6.4fW"
+
   for ts,(u,i,p) in result_data:
     ts = datetime.datetime.fromtimestamp(ts).strftime(TIMESTAMP_FMT)
     u = 0 if not u else u
     i = 0 if not i else i
     p = 0 if not p else p
-    if I_SCALE == 1000:
-      # we display mA
-      format = "%s: %s=%4.2fV, %s=%4.0fmA, %s=%4.2fW"
-    else:
-      format = "%s: %s=%6.4fV, %s=%6.3fA, %s=%6.4fW"
-    print(format % (ts, result_title[0],u, result_title[1],i, result_title[2],p))
+    try:
+      print(format % (ts, result_title[0],u, result_title[1],i, result_title[2],p))
+    except:
+      pass
 
 # --- graph data   -----------------------------------------------------------
 
