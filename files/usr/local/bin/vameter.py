@@ -227,7 +227,7 @@ def convert_data(u_raw,ui_raw):
 
   secs += 1
   u = max(0.0,u_raw*U_RES*U_FAC)
-  i = max(0.0,(U_CC/2 - ui_raw*U_RES)/CONV_VALUE)*I_SCALE
+  i = max(0.0,(U_CC/2 - ui_raw*U_RES*U_FAC)/CONV_VALUE)*I_SCALE
   p = u*i/I_SCALE
 
   u_max  = max(u_max,u)
