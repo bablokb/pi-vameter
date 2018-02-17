@@ -175,7 +175,7 @@ def read_spi(channel,options):
       return int((5 + 0.5*math.sin(float(now)))/(U_RES*U_FAC))
     else:
       i = 0.5 + 0.5*math.cos(float(now))
-      return int((U_CC/2 - i*CONV_VALUE)/(U_RES*U_FAC))
+      return int((U_CC/2 - i*CONV_VALUE)/U_RES)
   else:
     cmd_bytes = list(ADC_BYTES[channel])       # use copy, since
     data = options.spi.xfer(cmd_bytes)         # xfer changes the data
@@ -226,8 +226,8 @@ def convert_data(u_raw,ui_raw):
   global secs, u_max, i_max, p_max, p_sum
 
   secs += 1
-  u = max(0.0,u_raw*U_RES*U_FAC)
-  i = max(0.0,(U_CC/2 - ui_raw*U_RES*U_FAC)/CONV_VALUE)*I_SCALE
+  u = max(0.0,(1+u_raw)*U_RES*U_FAC)
+  i = max(0.0,(U_CC/2 - (1+ui_raw)*U_RES)/CONV_VALUE)*I_SCALE
   p = u*i/I_SCALE
 
   u_max  = max(u_max,u)
