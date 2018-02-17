@@ -266,6 +266,17 @@ def display_data(options,ts,u,i,p):
     except:
       pass
     return
+  elif options.out_opt == "json":
+    try:
+      sys.stdout.write(
+        '{"ts": "%s", "U": "%.2f", "I": "%.1f", "P": "%.2f", ' %
+                       (ts.strftime("%s"),u,i,p) +
+                     '"U_max": "%.2f", "I_max": "%.1f", "P_max": "%.2f"}\n' %
+                       (u_max,i_max,p_max))
+      sys.stdout.flush()
+    except:
+      pass
+    return
 
   (h,m,s) = convert_secs(secs)
 
@@ -516,18 +527,27 @@ def print_summary(options):
   (h,m,s) = convert_secs(secs)
 
   try:
-    if options.out_opt == "term" or options.out_opt == "both":
+    if options.out_opt in ["term", "both", "plain"]:
       print(LINE0)
       print("|%s|" % LINE1)
       print("|%s|" % LINE2.format("avg",i_avg,u_avg,p_avg))
       print("|%s|" % LINE3.format(i_max,u_max,p_max))
       print("|%s|" % LINE4.format(h,m,s,p_tot))
       print(LINE0)
-    if options.out_opt == "44780" or options.out_opt == "both":
+    if options.out_opt in ["44780", "both"]:
       options.lcd.lcd_display_string(LINE1, 1)
       options.lcd.lcd_display_string(LINE2.format("avg",i_avg,u_avg,p_avg), 2)
       options.lcd.lcd_display_string(LINE3.format(i_max,u_max,p_max), 3)
       options.lcd.lcd_display_string(LINE4.format(h,m,s,p_tot),4)
+    if options.out_opt == "json":
+      sys.stdout.write(
+        '{"U_avg": "%.2f", "I_avg": "%.1f", "P_avg": "%.2f", ' %
+                       (u_avg,i_avg,p_avg) +
+                     '"U_max": "%.2f", "I_max": "%.1f", "P_max": "%.2f"}' %
+                       (u_max,i_max,p_max) +
+                     '"tot": "%02d:%02d:%02d", "P_tot": "%.2f"}\n' %
+                       (h,m,s,p_tot))
+      sys.stdout.flush()
   except:
     pass
 
@@ -661,8 +681,10 @@ def get_parser():
 
   parser.add_argument('-O', '--output', nargs='?',
     metavar='opt', default='auto', const="auto",
-    dest='out_opt', choices=["auto","44780","term","both","plain","log","none"],
-    help='output-mode for measurements: one of auto, 44780, term, both, plain, log, none)')
+    dest='out_opt',
+    choices=["auto","44780","term","both","plain","json","log","none"],
+    help="""output-mode for measurements: one of
+            auto, 44780, term, both, plain, json, log, none)""")
 
   parser.add_argument('-R', '--raw', action='store_true',
     dest='raw', default=False,
