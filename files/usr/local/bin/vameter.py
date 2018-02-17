@@ -175,7 +175,7 @@ def read_spi(channel,options):
       return int((5 + 0.5*math.sin(float(now)))/(U_RES*U_FAC))
     else:
       i = 0.5 + 0.5*math.cos(float(now))
-      return int((U_CC/2 - i*CONV_VALUE)/U_RES)
+      return int((U_CC/2 - i*CONV_VALUE)/(U_RES*U_FAC))
   else:
     cmd_bytes = list(ADC_BYTES[channel])       # use copy, since
     data = options.spi.xfer(cmd_bytes)         # xfer changes the data
