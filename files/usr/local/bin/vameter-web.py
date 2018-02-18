@@ -22,6 +22,7 @@ import rrdtool
 
 import bottle
 from bottle import route
+from gevent import monkey; monkey.patch_all()
 
 # --- helper class for options   --------------------------------------------
 
@@ -220,6 +221,8 @@ def start():
     os.path.join(options.pgm_dir,"vameter.py"),
     "-D",
     options.data_root[0],
+    "-O",
+    "json",
     "-g",
     "UIP",
     "-r"
@@ -228,9 +231,39 @@ def start():
     args.append(os.path.join(options.data_root[0],"%s.rrd" % name))
 
   # start process
-  options.collect_process = subprocess.Popen(args,stdout=options.devnull,
-                                             stderr=subprocess.STDOUT)
+  options.collect_process = subprocess.Popen(args,
+                                             bufsize=-1,
+                                             stdout=subprocess.PIPE,
+                                             stderr=options.devnull)
 
+# --- send server-side-events   --------------------------------------------
+
+@route('/update',method='GET')
+def update():
+  """ send server side event data """
+
+  global options
+  p = options.collect_process
+  if not p:
+    bottle.response.content_type = 'text/plain'
+    bottle.response.status = 404                 # not found
+
+  try:
+    bottle.response.content_type = 'text/event-stream'
+    bottle.response.set_header('Cache-Control','no-cache')
+    bottle.response.set_header('Connection','keep-alive')
+    while True:
+      data = p.stdout.readline()
+      if data == '' and p.poll() is not None:
+        break
+      if data:
+        # send data using SSE
+        bottle.response.status = 200                 # OK
+        yield "data: %s\n\n" % data
+  except:
+    pass
+  bottle.response.content_type = 'text/plain'
+  bottle.response.status = 404
 
 # --- stop data collection   -----------------------------------------------
 
@@ -312,6 +345,12 @@ if __name__ == '__main__':
   if options.debug:
     print("DEBUG: web-root directory: %s" % WEB_ROOT)
     print("DEBUG: starting the webserver in debug-mode")
-    bottle.run(host='localhost', port=options.port[0], debug=True,reloader=True)
+    bottle.run(host='localhost',
+               port=options.port[0],
+               debug=True,reloader=True,
+               server='gevent')
   else:
-    bottle.run(host=options.host[0], port=options.port[0], debug=False,reloader=False)
+    bottle.run(host=options.host[0],
+               port=options.port[0],
+               debug=False,reloader=False,
+               server='gevent')
