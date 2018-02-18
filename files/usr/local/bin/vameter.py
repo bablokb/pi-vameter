@@ -226,8 +226,8 @@ def convert_data(u_raw,ui_raw):
   global secs, u_max, i_max, p_max, p_sum
 
   secs += 1
-  u = max(0.0,(1+u_raw)*U_RES*U_FAC)
-  i = max(0.0,(U_CC/2 - (1+ui_raw)*U_RES)/CONV_VALUE)*I_SCALE
+  u = max(0.0,u_raw*U_RES*U_FAC)
+  i = max(0.0,(U_CC/2 - ui_raw*U_RES)/CONV_VALUE)*I_SCALE
   p = u*i/I_SCALE
 
   u_max  = max(u_max,u)
