@@ -21,6 +21,28 @@ showMsg=function(text,time) {
 };
 
 /**
+  Setup SSE
+*/
+
+setup_SSE=function() {
+  if (!!window.EventSource) {
+    var source = new EventSource('/update');
+    source.addEventListener('message', function(e) {
+      data = JSON.parse(e.data);
+      console.error(data);
+      $("#I_act").text(data.I);
+      $("#U_act").text(data.U);
+      $("#P_act").text(data.P);
+      $("#I_max").text(data.I_max);
+      $("#U_max").text(data.U_max);
+      $("#P_max").text(data.P_max);
+      $("#s_tot").text(data.s_tot);
+      $("#P_tot").text(data.P_tot);
+     }, false);
+  }
+};
+
+/**
   Handle action start
 */
 
@@ -36,6 +58,8 @@ doStart=function() {
       $('#Start').hide();
       $('#inpStart').val('');
       $('#btnStop').show();
+      setup_SSE();
+      $('#Live').show();
     }
   });
 };
@@ -49,6 +73,7 @@ doStop=function() {
   showMsg("Stopping data-collection ...",3000);
   $('#Start').show();
   $('#btnStop').hide();
+  $('#Live').hide();
   setTimeout(function() { get_results();},3000);
 };
 
