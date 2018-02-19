@@ -252,6 +252,8 @@ def display_data(options,ts,u,i,p):
 
   global secs, u_max, i_max, p_max, p_sum
 
+  (h,m,s) = convert_secs(secs)
+
   if options.out_opt == "none":
     return
   elif options.out_opt == "log":
@@ -271,14 +273,13 @@ def display_data(options,ts,u,i,p):
       sys.stdout.write(
         '{"ts": "%s", "U": "%.2f", "I": "%.1f", "P": "%.2f", ' %
                        (ts.strftime("%s"),u,i,p) +
-                     '"U_max": "%.2f", "I_max": "%.1f", "P_max": "%.2f"}\n' %
-                       (u_max,i_max,p_max))
+                     '"U_max": "%.2f", "I_max": "%.1f", "P_max": "%.2f",' %
+                       (u_max,i_max,p_max) +
+              ' "s_tot": "%02d:%02d:%02d", "P_tot": "%.2f"}\n' % (h,m,s,p_sum/3600.0 ))
       sys.stdout.flush()
     except:
       pass
     return
-
-  (h,m,s) = convert_secs(secs)
 
   try:
     if options.out_opt == "term" or options.out_opt == "both":
