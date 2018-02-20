@@ -9,7 +9,7 @@
 #
 # --------------------------------------------------------------------------
 
-PACKAGES="python-pip python-spidev python-smbus python-bottle python-rrdtool rrdtool"
+PACKAGES="python-gevent python-pip python-spidev python-smbus python-bottle python-rrdtool rrdtool"
 PROJECT="pi-vameter"
 
 # --- basic packages   ------------------------------------------------------
