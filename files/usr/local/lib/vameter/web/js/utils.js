@@ -14,7 +14,7 @@
 */
 
 showMsg=function(text,time) {
-  $("#msgarea").html("<div class='msg_info'>"+text+"</div><br>");
+  $("#msgarea").text(text);
   setTimeout(function() {
                $("#msgarea").empty();
              }, time);
