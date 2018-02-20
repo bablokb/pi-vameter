@@ -35,4 +35,5 @@
                 w3-mobile w3-light-blue" onclick="onAuthor()">Author</a>
   <a id="btnLicense" href="#" class="w3-bar-item w3-button w3-border-right
                 w3-mobile w3-light-blue" onclick="onLicense()">License</a>
+  <div id="msgarea" class="w3-bar-item w3-margin-left"></div>
 </div>
