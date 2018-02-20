@@ -131,13 +131,32 @@ to the changes to `/boot/config.txt` you have to reboot your system to
 activate the changes.
 
 Besides the configuration of the GPIO for the start/stop-button you also
-have to check the script `/usr/local/bin/vameter.py`. Sadly, every ADC-converter
-needs it's special read commands and you have to configure the data
-for the ADC you are using. The script already contains some values for
-widely used ADCs (check variables `ADC` and `ADC_VALUES` at the beginning
-of the script). If your ADC is already supported you just have to change
-the variable `ADC`. Otherwise, you have to add the values of your ADC to
+have to set some basic configuration values in `/etc/vameter.conf`.
+The first variable is just a configuration. The other two are calibration
+variables necessary to deal with sample variation and effects of the
+layout of the module:
+
+  - `ADC`: the type of ADC you are using
+  - `U_CC_2': the Hall-senser should output this value for I = 0mA
+  - `CONV_VALUE': conversion-value of the Hall-sensor (see the datasheet)
+
+Sadly, every ADC-converter needs it's special read commands and you
+have to configure the data for the ADC you are using. The script
+already contains some values for widely used ADCs (check variable
+`ADC_VALUES` at the beginning of the script). If your ADC is
+already supported you just have to change the variable
+`ADC`. Otherwise, you have to add the values of your ADC to
 `ADC_VALUES` first (and submit a patch).
+
+The value of `U_CC_2` has to be determined through measurement of
+Viout without any load - the Viout of the Hall-sensor shoud read
+something near 2.5.
+
+The value of `CONV_VALUE` needs some more care. Usually the value
+from the datasheet (e.g. 0.185 V/A for the ACS712) is fine, but sometimes
+this has to be adapted. To estimate the value, measure a fixed load for
+a couple of minutes using `vameter.py`, check the average current and
+adapt the value as necessary.
 
 
 The database
