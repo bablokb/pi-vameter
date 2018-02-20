@@ -22,21 +22,46 @@ import os, sys, signal, signal, time, datetime, traceback
 import subprocess, syslog
 from argparse import ArgumentParser
 from threading import Thread, Event, Lock
-import json, rrdtool, statistics
+import json, rrdtool, statistics, ConfigParser
 
-# --- configuration   --------------------------------------------------------
+# --- read configuration-value   ---------------------------------------------
 
-# please change constant ADC
+def get_config(parser,section,option,default):
+  """ read a single configuration value """
+  if parser.has_section(section):
+    try:
+      value = parser.get(section,option)
+    except:
+      value = default
+  else:
+    value = default
+  return value
+
+# --- read configuration   ---------------------------------------------------
+
+def get_configuration():
+  """ read complete configuration """
+
+  global ADC, U_CC_2, CONV_VALUE
+
+  parser = ConfigParser.RawConfigParser()
+  parser.read('/etc/vameter.conf')
+
+  ADC        = get_config(parser,'ADC','ADC','MCP3202')
+  U_CC_2     = float(get_config(parser,'HALL','U_CC_2','2.5'))
+  CONV_VALUE = float(get_config(parser,'HALL','CONV_VALUE','0.185'))
+
+# --- constants   ------------------------------------------------------------
+
+get_configuration()
+
 # if your ADC is not in ADC_VALUES, add it and submit a pull-request
 
-ADC = 'MCP3202'
 ADC_VALUES = {
   'MCP3002': { 'CMD_BYTES': [[0,104,0],[0,120,0]], 'RESOLUTION': 10},
   'MCP3008': { 'CMD_BYTES': [[1,128,0],[1,144,0]], 'RESOLUTION': 10},
   'MCP3202': { 'CMD_BYTES': [[1,160,0],[1,224,0]], 'RESOLUTION': 12}
   }
-
-# --- constants   ------------------------------------------------------------
 
 # derived values, don't change
 ADC_BYTES  = ADC_VALUES[ADC]['CMD_BYTES']
@@ -57,11 +82,6 @@ U_FAC         = 5.0/3.0     # this depends on the measurement-circuit
 U_RES         = U_REF/ADC_RES
 
 I_SCALE       = 1000        # scale A to mA
-
-
-# Hall sensor
-U_CC_2       = 2.5    # Volt
-CONV_VALUE =   0.185  # V/A      converter value
 
 # output format-templates
 LINE0 = "----------------------"
@@ -755,6 +775,7 @@ def check_options(options):
 # --- main program   ---------------------------------------------------------
 
 if __name__ == '__main__':
+
   # parse commandline-arguments
   opt_parser     = get_parser()
   options        = opt_parser.parse_args(namespace=Options)
@@ -773,6 +794,8 @@ if __name__ == '__main__':
     options.logger.msg("DEBUG", "ADC resolution: %s" % ADC_RES)
     options.logger.msg("DEBUG", "ADC command-bytes: %r" % ADC_BYTES)
     options.logger.msg("DEBUG", "ADC mask: %r" % bin(ADC_MASK))
+    options.logger.msg("DEBUG", "HALL U_CC_2:     %4.2f" % U_CC_2)
+    options.logger.msg("DEBUG", "HALL conv-value: %5.3f" % CONV_VALUE)
     get_data(options)
 
   # we always create a summary if it does not yet exist
