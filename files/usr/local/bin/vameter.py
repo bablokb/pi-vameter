@@ -60,7 +60,7 @@ I_SCALE       = 1000        # scale A to mA
 
 
 # Hall sensor
-U_CC       =   5.0    # Volt
+U_CC_2       = 2.5    # Volt
 CONV_VALUE =   0.185  # V/A      converter value
 
 # output format-templates
@@ -175,7 +175,7 @@ def read_spi(channel,options):
       return int((5 + 0.5*math.sin(float(now)))/(U_RES*U_FAC))
     else:
       i = 0.5 + 0.5*math.cos(float(now))
-      return int((U_CC/2 - i*CONV_VALUE)/U_RES)
+      return int((U_CC_2 - i*CONV_VALUE)/U_RES)
   else:
     cmd_bytes = list(ADC_BYTES[channel])       # use copy, since
     data = options.spi.xfer(cmd_bytes)         # xfer changes the data
@@ -227,7 +227,7 @@ def convert_data(u_raw,ui_raw):
 
   secs += 1
   u = max(0.0,u_raw*U_RES*U_FAC)
-  i = max(0.0,(U_CC/2 - ui_raw*U_RES)/CONV_VALUE)*I_SCALE
+  i = max(0.0,(U_CC_2 - ui_raw*U_RES)/CONV_VALUE)*I_SCALE
   p = u*i/I_SCALE
 
   u_max  = max(u_max,u)
