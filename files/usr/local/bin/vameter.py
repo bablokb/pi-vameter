@@ -240,15 +240,19 @@ def create_db(options):
 
 # --- convert data   ---------------------------------------------------------
 
-def convert_data(u_raw,ui_raw):
+def convert_data(u_raw,ui_raw,voltage=False):
   """ convert (scale) data """
 
   global secs, u_max, i_max, p_max, p_sum
 
   secs += 1
-  u = max(0.0,u_raw*U_RES*U_FAC)
-  i = max(0.0,(U_CC_2 - ui_raw*U_RES)/CONV_VALUE)*I_SCALE
-  p = u*i/I_SCALE
+  u = u_raw*U_RES*U_FAC
+  if voltage:
+    i = ui_raw*U_RES
+    p = 0.0                 # not relevant
+  else:
+    i = max(0.0,(U_CC_2 - ui_raw*U_RES)/CONV_VALUE)*I_SCALE
+    p = u*i/I_SCALE
 
   u_max  = max(u_max,u)
   i_max  = max(i_max,i)
@@ -282,7 +286,14 @@ def display_data(options,ts,u,i,p):
     return
   elif options.out_opt == "plain":
     try:
-      sys.stderr.write("%s: %4.2fV, %6.1fmA, %5.2fW\n" %
+      if options.raw:
+        sys.stderr.write("%s: U: %8.2f, I: %8.2f\n" %
+                       (ts.strftime(TIMESTAMP_FMT+".%f"),u,i))
+      elif options.voltage:
+        sys.stderr.write("%s: U: %4.2fV, I: %4.2fV\n" %
+                       (ts.strftime(TIMESTAMP_FMT+".%f"),u,i))
+      else:
+        sys.stderr.write("%s: %4.2fV, %6.1fmA, %5.2fW\n" %
                        (ts.strftime(TIMESTAMP_FMT+".%f"),u,i,p))
       sys.stderr.flush()
     except:
@@ -379,8 +390,8 @@ def save_and_display(options,ts,u_samp,ui_samp):
   # calculate values and log statistics
   u_raw   = statistics.mean(u_samp)
   ui_raw  = statistics.mean(ui_samp)
-  options.logger.msg("DEBUG", "u_raw   mean: %5d" % u_raw)
-  options.logger.msg("DEBUG", "i_raw   mean: %5d" % ui_raw)
+  options.logger.msg("DEBUG", "u_raw   mean: %8.2f" % u_raw)
+  options.logger.msg("DEBUG", "i_raw   mean: %8.2f" % ui_raw)
 
   # since calculation of statistics is expensive, check level
   if options.level == "TRACE":
@@ -388,14 +399,17 @@ def save_and_display(options,ts,u_samp,ui_samp):
                               statistics.median(u_samp))
     options.logger.msg("TRACE", "i_raw median: %5d" %
                               statistics.median(ui_samp))
-    options.logger.msg("TRACE", "u_raw  sigma: %5.2f" %
+    options.logger.msg("TRACE", "u_raw  sigma: %8.2f" %
                               statistics.stdev(u_samp,u_raw))
-    options.logger.msg("TRACE", "i_raw  sigma: %5.2f" %
+    options.logger.msg("TRACE", "i_raw  sigma: %8.2f" %
                               statistics.stdev(ui_samp,ui_raw))
 
   # convert values
   if options.raw:
-    (U,I,P) = (u_raw,ui_raw,u_raw*ui_raw)
+    (U,I,P) = (u_raw,ui_raw,0)
+  elif options.voltage:
+    (U,I,P) = convert_data(u_raw,ui_raw,voltage=True)
+    options.logger.msg("TRACE", "voltage data (U,I): %4.2f,%4.2f" % (U,I))
   else:
     (U,I,P) = convert_data(u_raw,ui_raw)
     options.logger.msg("TRACE", "converted data (U,I,P): %4.2f,%6.1f,%5.2f" % (U,I,P))
@@ -407,7 +421,8 @@ def save_and_display(options,ts,u_samp,ui_samp):
   if I >= options.limit:
     if options.limit > 0:
       options.limit = 0  # once above the limit, record everything
-    rrdtool.update(options.dbfile,"%s:%f:%f:%f" % (ts.strftime("%s"),U,I,P))
+    if not options.raw:
+      rrdtool.update(options.dbfile,"%s:%f:%f:%f" % (ts.strftime("%s"),U,I,P))
 
     # save start timestamp, since rrdtool does not record it
     if options.ts_start == 0:
@@ -710,6 +725,9 @@ def get_parser():
   parser.add_argument('-R', '--raw', action='store_true',
     dest='raw', default=False,
     help='record raw ADC-values')
+  parser.add_argument('-V', '--voltage', action='store_true',
+    dest='voltage', default=False,
+    help='record voltage values from ADC')
   parser.add_argument('-T', '--trigger', nargs=1,
     metavar='limit', default=[0.0],
     dest='limit', type=float,
@@ -799,14 +817,16 @@ if __name__ == '__main__':
     get_data(options)
 
   # we always create a summary if it does not yet exist
-  options.summary = sum_data(options)
+  if not options.raw:
+    options.summary = sum_data(options)
 
   # create output
-  if options.do_print:
-    print_data(options)
-  if options.do_sum:
-    print_summary(options)
-  if options.do_graph:
-    graph_data(options)
+  if not options.raw:
+    if options.do_print:
+      print_data(options)
+    if options.do_sum:
+      print_summary(options)
+    if options.do_graph:
+      graph_data(options)
 
   sys.exit(0)
