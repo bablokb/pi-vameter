@@ -63,6 +63,10 @@ install_files() {
     # save current configuration
     mv "/etc/gpio-poll.conf" "/etc/gpio-poll.conf.$rand"
   fi
+  if [ -f "/etc/vameter.conf" ]; then
+    # save current configuration
+    mv "/etc/vameter.conf" "/etc/vameter.conf.$rand"
+  fi
 
   for f in `find $(dirname "$0")/../files/ -type f -not -name "*.pyc"`; do
     target="${f#*files}"
@@ -74,13 +78,18 @@ install_files() {
 
   chmod 755 "/usr/local/bin/vameter.py"
   chmod 755 "/usr/local/bin/vameterctl"
-  chmod 644 "/etc/gpio-poll.conf"
+  chmod 644 "/etc/gpio-poll.conf" "/etc/vameter.conf"
 
   # restore old configuration
   if [ -f "/etc/gpio-poll.conf.$rand" ]; then
     mv -f "/etc/gpio-poll.conf" "/etc/gpio-poll.conf.new"
     mv "/etc/gpio-poll.conf.$rand" "/etc/gpio-poll.conf"
     echo -e "[INFO] new version of configuration file saved to: /etc/gpio-poll.conf.new" 2>&1
+  fi
+  if [ -f "/etc/vameter.conf.$rand" ]; then
+    mv -f "/etc/vameter.conf" "/etc/vameter.conf.new"
+    mv "/etc/vameter.conf.$rand" "/etc/vameter.conf"
+    echo -e "[INFO] new version of configuration file saved to: /etc/vameter.conf.new" 2>&1
   fi
 
 }
@@ -125,7 +134,7 @@ enable_services() {
   echo -e "[INFO] enabeling vameter-web.service" 2>&1
   systemctl enable "vameter-web.service"
   echo -e "[INFO] starting vameter-web.service" 2>&1
-  systemctl start  "vameter-web.service"
+  systemctl restart  "vameter-web.service"
 }
 
 # --- main program   --------------------------------------------------------
