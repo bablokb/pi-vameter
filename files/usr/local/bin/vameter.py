@@ -85,13 +85,16 @@ I_SCALE       = 1000        # scale A to mA
 
 # output format-templates
 LINE0  = "----------------------"
+
 LINE1  = "   I(mA)  U(V)  P(W)"
-LINE1V = "   I(V)   U(V)  P(W)"
 LINE2  = "{0} {1:4d}  {2:4.2f}  {3:4.2f}"
 LINE3  = "max{0:5d}  {1:4.2f}  {2:4.1f}"
-LINE2V = "{0} {1:4.1f}  {2:4.2f}  {3:4.2f}"
-LINE3V = "max{0:5.1f}  {1:4.2f}  {2:4.1f}"
 LINE4  = "tot {0:02d}:{1:02d}:{2:02d} {3:5.2f}Wh"
+
+LINE1V = "     UI(V)     U(V) "
+LINE2V = "{0} {1:6.4f}   {2:6.4f} "
+LINE3V = "max {0:6.4f}   {1:6.4f} "
+LINE4V = "tot {0:02d}:{1:02d}:{2:02d}        "
 
 # --- helper class for options   --------------------------------------------
 
@@ -293,7 +296,7 @@ def display_data(options,ts,u,i,p):
         sys.stderr.write("%s: U: %8.2f, I: %8.2f\n" %
                        (ts.strftime(TIMESTAMP_FMT+".%f"),u,i))
       elif options.voltage:
-        sys.stderr.write("%s: U: %4.2fV, I: %4.2fV\n" %
+        sys.stderr.write("%s: U: %6.4fV, I: %6.4fV\n" %
                        (ts.strftime(TIMESTAMP_FMT+".%f"),u,i))
       else:
         sys.stderr.write("%s: %4.2fV, %6.1fmA, %5.2fW\n" %
@@ -321,24 +324,26 @@ def display_data(options,ts,u,i,p):
       print(LINE0)
       if options.voltage:
         print("|%s|" % LINE1V)
-        print("|%s|" % LINE2V.format("now",i,u,p))
-        print("|%s|" % LINE3V.format(i_max,u_max,p_max))
+        print("|%s|" % LINE2V.format("now",i,u))
+        print("|%s|" % LINE3V.format(i_max,u_max))
+        print("|%s|" % LINE4V.format(h,m,s))
       else:
         print("|%s|" % LINE1)
         print("|%s|" % LINE2.format("now",int(i),u,p))
         print("|%s|" % LINE3.format(int(i_max),u_max,p_max))
-      print("|%s|" % LINE4.format(h,m,s,p_sum/3600.0))
+        print("|%s|" % LINE4.format(h,m,s,p_sum/3600.0))
       print(LINE0)
     if options.out_opt == "44780" or options.out_opt == "both":
       if options.voltage:
         options.lcd.lcd_display_string(LINE1V, 1)
-        options.lcd.lcd_display_string(LINE2V.format("now",i,u,p), 2)
-        options.lcd.lcd_display_string(LINE3V.format(i_max,u_max,p_max), 3)
+        options.lcd.lcd_display_string(LINE2V.format("now",i,u), 2)
+        options.lcd.lcd_display_string(LINE3V.format(i_max,u_max), 3)
+        options.lcd.lcd_display_string(LINE4V.format(h,m,s),4)
       else:
         options.lcd.lcd_display_string(LINE1, 1)
         options.lcd.lcd_display_string(LINE2.format("now",int(i),u,p), 2)
         options.lcd.lcd_display_string(LINE3.format(int(i_max),u_max,p_max), 3)
-      options.lcd.lcd_display_string(LINE4.format(h,m,s,p_sum/3600.0),4)
+        options.lcd.lcd_display_string(LINE4.format(h,m,s,p_sum/3600.0),4)
   except:
     pass
 
@@ -533,10 +538,10 @@ def sum_data(options):
           I_def, I_avg, I_max,
           U_def, U_avg, U_max,
           P_def, P_avg, P_max,
-          "PRINT:I_avg:%6.2lf",
-          "PRINT:I_max:%6.2lf",
-          "PRINT:U_avg:%6.2lf",
-          "PRINT:U_max:%6.2lf",
+          "PRINT:I_avg:%8.4lf",
+          "PRINT:I_max:%8.4lf",
+          "PRINT:U_avg:%8.4lf",
+          "PRINT:U_max:%8.4lf",
           "PRINT:P_avg:%6.2lf",
           "PRINT:P_max:%6.2lf"
          ]
@@ -586,22 +591,24 @@ def print_summary(options):
         print("|%s|" % LINE1V)
         print("|%s|" % LINE2V.format("avg",i_avg,u_avg,p_avg))
         print("|%s|" % LINE3V.format(i_max,u_max,p_max))
+        print("|%s|" % LINE4V.format(h,m,s))
       else:
         print("|%s|" % LINE1)
         print("|%s|" % LINE2.format("avg",i_avg,u_avg,p_avg))
         print("|%s|" % LINE3.format(i_max,u_max,p_max))
-      print("|%s|" % LINE4.format(h,m,s,p_tot))
+        print("|%s|" % LINE4.format(h,m,s,p_tot))
       print(LINE0)
     if options.out_opt in ["44780", "both"]:
       if options.voltage:
         options.lcd.lcd_display_string(LINE1V, 1)
         options.lcd.lcd_display_string(LINE2V.format("avg",i_avg,u_avg,p_avg), 2)
         options.lcd.lcd_display_string(LINE3V.format(i_max,u_max,p_max), 3)
+        options.lcd.lcd_display_string(LINE4V.format(h,m,s),4)
       else:
         options.lcd.lcd_display_string(LINE1, 1)
         options.lcd.lcd_display_string(LINE2.format("avg",i_avg,u_avg,p_avg), 2)
         options.lcd.lcd_display_string(LINE3.format(i_max,u_max,p_max), 3)
-      options.lcd.lcd_display_string(LINE4.format(h,m,s,p_tot),4)
+        options.lcd.lcd_display_string(LINE4.format(h,m,s,p_tot),4)
     if options.out_opt == "json":
       sys.stdout.write(
         '{"U_avg": "%.2f", "I_avg": "%.1f", "P_avg": "%.2f", ' %
@@ -621,20 +628,17 @@ def print_data(options):
 
   result_title,result_data = fetch_data(options)
 
-  # print data
-  if I_SCALE == 1000:
-    # we display mA
-    format = "%s: %s=%4.2fV, %s=%4.0fmA, %s=%4.2fW"
-  else:
-    format = "%s: %s=%6.4fV, %s=%6.3fA, %s=%6.4fW"
-
   for ts,(u,i,p) in result_data:
     ts = datetime.datetime.fromtimestamp(ts).strftime(TIMESTAMP_FMT)
     u = 0 if not u else u
     i = 0 if not i else i
     p = 0 if not p else p
     try:
-      print(format % (ts, result_title[0],u, result_title[1],i, result_title[2],p))
+      if options.voltage:
+        print("%s: U=%6.4fV, UI=%6.4fV" % (ts,u,i))
+      else:
+        print("%s: %s=%4.2fV, %s=%4.0fmA, %s=%4.2fW" %
+              (ts, result_title[0],u, result_title[1],i, result_title[2],p))
     except:
       pass
 
@@ -666,14 +670,9 @@ def graph_data(options):
       vlow     = "0.0"
       vhigh    = "6.0"
     elif graph_type == 'I':
-      if I_SCALE == 1:
-        vlabel   = "I (A)"
-        info_avg = "GPRINT:Iavg:I Avg \t%6.3lf A"
-        info_max = "GPRINT:Imax:I Max \t%6.3lf A\c"
-      else:
-        vlabel   = "I (mA)"
-        info_avg = "GPRINT:Iavg:I Avg \t%6.0lf mA"
-        info_max = "GPRINT:Imax:I Max \t%6.0lf mA\c"
+      vlabel   = "I (mA)"
+      info_avg = "GPRINT:Iavg:I Avg \t%6.0lf mA"
+      info_max = "GPRINT:Imax:I Max \t%6.0lf mA\c"
       line     = "LINE2:%s#00FF00:%savg" % (graph_type,graph_type)
     else:
       vlabel   = "P (W)"
