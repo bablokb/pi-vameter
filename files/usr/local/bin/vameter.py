@@ -151,33 +151,27 @@ class Msg(object):
 def query_output_opts(options):
   """ query output options """
 
+  # check terminal
   if options.out_opt == "auto" or options.out_opt == "term":
-    # check terminal
     try:
       have_term = os.getpgrp() == os.tcgetpgrp(sys.stdout.fileno())
     except:
       have_term = False
-
-  if options.out_opt == "auto" or options.out_opt == "44780":
-    # check 44780
-    try:
-      options.logger.msg("DEBUG", "checking HD44780")
-      bus = smbus.SMBus(1)
-      bus.read_byte(0x27)
-      have_disp = True
-      options.lcd = lcddriver.lcd()
-    except:
-      have_disp = False
-
-  if options.out_opt == "auto":
-    if have_term and have_disp:
-      options.out_opt = "both"
-    elif have_term:
-      options.out_opt = "term"
-    elif have_disp:
-      options.out_opt = "44780"
+    if not have_term:
+      options.out_opt = 'plain'
+      options.logger.msg("INFO","switching to 'plain' output")
     else:
-      options.out_opt = "log"
+      options.out_opt = 'term'
+
+  # check 44780
+  try:
+    options.logger.msg("DEBUG", "checking HD44780")
+    bus = smbus.SMBus(1)
+    bus.read_byte(0x27)
+    options.have_disp = True
+    options.lcd = lcddriver.lcd()
+  except:
+    options.have_disp = False
 
 # --- initialize SPI-bus   ---------------------------------------------------
 
@@ -284,42 +278,26 @@ def display_data(options,ts,u,i,p):
 
   (h,m,s) = convert_secs(secs)
 
-  if options.out_opt == "none":
-    return
-  elif options.out_opt == "log":
-    options.logger.msg("INFO", "%s: %fV, %fmA, %fW" %
-                       (ts.strftime(TIMESTAMP_FMT+".%f"),u,i,p))
-    return
-  elif options.out_opt == "plain":
-    try:
-      if options.raw:
-        sys.stderr.write("%s: U: %8.2f, I: %8.2f\n" %
-                       (ts.strftime(TIMESTAMP_FMT+".%f"),u,i))
-      elif options.voltage:
-        sys.stderr.write("%s: U: %6.4fV, I: %6.4fV\n" %
-                       (ts.strftime(TIMESTAMP_FMT+".%f"),u,i))
-      else:
-        sys.stderr.write("%s: %4.2fV, %6.1fmA, %5.2fW\n" %
-                       (ts.strftime(TIMESTAMP_FMT+".%f"),u,i,p))
-      sys.stderr.flush()
-    except:
-      pass
-    return
-  elif options.out_opt == "json":
-    try:
-      sys.stdout.write(
-        '{"ts": "%s", "U": "%.2f", "I": "%.1f", "P": "%.2f", ' %
-                       (ts.strftime("%s"),u,i,p) +
-                     '"U_max": "%.2f", "I_max": "%.1f", "P_max": "%.2f",' %
-                       (u_max,i_max,p_max) +
-              ' "s_tot": "%02d:%02d:%02d", "P_tot": "%.2f"}\n' % (h,m,s,p_sum/3600.0 ))
-      sys.stdout.flush()
-    except:
-      pass
-    return
-
+  # always try to write to the display
   try:
-    if options.out_opt == "term" or options.out_opt == "both":
+    if options.have_disp:
+      if options.voltage:
+        options.lcd.lcd_display_string(LINE1V, 1)
+        options.lcd.lcd_display_string(LINE2V.format("now",i,u), 2)
+        options.lcd.lcd_display_string(LINE3V.format(i_max,u_max), 3)
+        options.lcd.lcd_display_string(LINE4V.format(h,m,s),4)
+      else:
+        options.lcd.lcd_display_string(LINE1, 1)
+        options.lcd.lcd_display_string(LINE2.format("now",int(i),u,p), 2)
+        options.lcd.lcd_display_string(LINE3.format(int(i_max),u_max,p_max), 3)
+        options.lcd.lcd_display_string(LINE4.format(h,m,s,p_sum/3600.0),4)
+  except:
+    #traceback.format_exc()
+    pass
+
+  # check other output-options (silently ignore 'none')
+  try:
+    if options.out_opt == "term":
       print("\033c")
       print(LINE0)
       if options.voltage:
@@ -333,18 +311,34 @@ def display_data(options,ts,u,i,p):
         print("|%s|" % LINE3.format(int(i_max),u_max,p_max))
         print("|%s|" % LINE4.format(h,m,s,p_sum/3600.0))
       print(LINE0)
-    if options.out_opt == "44780" or options.out_opt == "both":
-      if options.voltage:
-        options.lcd.lcd_display_string(LINE1V, 1)
-        options.lcd.lcd_display_string(LINE2V.format("now",i,u), 2)
-        options.lcd.lcd_display_string(LINE3V.format(i_max,u_max), 3)
-        options.lcd.lcd_display_string(LINE4V.format(h,m,s),4)
+
+    elif options.out_opt == "log":
+      options.logger.msg("INFO", "%s: %fV, %fmA, %fW" %
+                         (ts.strftime(TIMESTAMP_FMT+".%f"),u,i,p))
+
+    elif options.out_opt == "plain":
+      if options.raw:
+        sys.stderr.write("%s: U: %8.2f, I: %8.2f\n" %
+                       (ts.strftime(TIMESTAMP_FMT+".%f"),u,i))
+      elif options.voltage:
+        sys.stderr.write("%s: U: %6.4fV, I: %6.4fV\n" %
+                       (ts.strftime(TIMESTAMP_FMT+".%f"),u,i))
       else:
-        options.lcd.lcd_display_string(LINE1, 1)
-        options.lcd.lcd_display_string(LINE2.format("now",int(i),u,p), 2)
-        options.lcd.lcd_display_string(LINE3.format(int(i_max),u_max,p_max), 3)
-        options.lcd.lcd_display_string(LINE4.format(h,m,s,p_sum/3600.0),4)
+        sys.stderr.write("%s: %4.2fV, %6.1fmA, %5.2fW\n" %
+                       (ts.strftime(TIMESTAMP_FMT+".%f"),u,i,p))
+      sys.stderr.flush()
+
+    elif options.out_opt == "json":
+      sys.stdout.write(
+          '{"ts": "%s", "U": "%.2f", "I": "%.1f", "P": "%.2f", ' %
+                         (ts.strftime("%s"),u,i,p) +
+                       '"U_max": "%.2f", "I_max": "%.1f", "P_max": "%.2f",' %
+                         (u_max,i_max,p_max) +
+                       ' "s_tot": "%02d:%02d:%02d", "P_tot": "%.2f"}\n' %
+                         (h,m,s,p_sum/3600.0 ))
+      sys.stdout.flush()
   except:
+    #traceback.format_exc()
     pass
 
 # --- collect data   ---------------------------------------------------------
@@ -585,6 +579,22 @@ def print_summary(options):
   (h,m,s) = convert_secs(secs)
 
   try:
+    if options.have_disp:
+      if options.voltage:
+        options.lcd.lcd_display_string(LINE1V, 1)
+        options.lcd.lcd_display_string(LINE2V.format("avg",i_avg,u_avg,p_avg), 2)
+        options.lcd.lcd_display_string(LINE3V.format(i_max,u_max,p_max), 3)
+        options.lcd.lcd_display_string(LINE4V.format(h,m,s),4)
+      else:
+        options.lcd.lcd_display_string(LINE1, 1)
+        options.lcd.lcd_display_string(LINE2.format("avg",i_avg,u_avg,p_avg), 2)
+        options.lcd.lcd_display_string(LINE3.format(i_max,u_max,p_max), 3)
+        options.lcd.lcd_display_string(LINE4.format(h,m,s,p_tot),4)
+  except:
+    #traceback.format_exc()
+    pass
+
+  try:
     if options.out_opt in ["term", "both", "plain"]:
       print(LINE0)
       if options.voltage:
@@ -598,18 +608,7 @@ def print_summary(options):
         print("|%s|" % LINE3.format(i_max,u_max,p_max))
         print("|%s|" % LINE4.format(h,m,s,p_tot))
       print(LINE0)
-    if options.out_opt in ["44780", "both"]:
-      if options.voltage:
-        options.lcd.lcd_display_string(LINE1V, 1)
-        options.lcd.lcd_display_string(LINE2V.format("avg",i_avg,u_avg,p_avg), 2)
-        options.lcd.lcd_display_string(LINE3V.format(i_max,u_max,p_max), 3)
-        options.lcd.lcd_display_string(LINE4V.format(h,m,s),4)
-      else:
-        options.lcd.lcd_display_string(LINE1, 1)
-        options.lcd.lcd_display_string(LINE2.format("avg",i_avg,u_avg,p_avg), 2)
-        options.lcd.lcd_display_string(LINE3.format(i_max,u_max,p_max), 3)
-        options.lcd.lcd_display_string(LINE4.format(h,m,s,p_tot),4)
-    if options.out_opt == "json":
+    elif options.out_opt == "json":
       sys.stdout.write(
         '{"U_avg": "%.2f", "I_avg": "%.1f", "P_avg": "%.2f", ' %
                        (u_avg,i_avg,p_avg) +
@@ -619,6 +618,7 @@ def print_summary(options):
                        (h,m,s,p_tot))
       sys.stdout.flush()
   except:
+    #traceback.format_exc()
     pass
 
 # --- print data   -----------------------------------------------------------
@@ -640,6 +640,7 @@ def print_data(options):
         print("%s: %s=%4.2fV, %s=%4.0fmA, %s=%4.2fW" %
               (ts, result_title[0],u, result_title[1],i, result_title[2],p))
     except:
+      #traceback.format_exc()
       pass
 
 # --- graph data   -----------------------------------------------------------
