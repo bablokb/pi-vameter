@@ -149,14 +149,32 @@ already supported you just have to change the variable
 `ADC_VALUES` first (and submit a patch).
 
 The value of `U_CC_2` has to be determined through measurement of
-Viout without any load - the Viout of the Hall-sensor shoud read
-something near 2.5.
+Viout without any load - the Viout of the Hall-sensor should read
+something near 2.5. Run the following command for a few minutes:
+
+    vameter.py -V -O plain -S test.rrd
+
+and take the average value of UI as `U_CC_2`.
 
 The value of `CONV_VALUE` needs some more care. Usually the value
 from the datasheet (e.g. 0.185 V/A for the ACS712) is fine, but sometimes
 this has to be adapted. To estimate the value, measure a fixed load for
 a couple of minutes using `vameter.py`, check the average current and
-adapt the value as necessary.
+adapt the value as necessary:
+
+  1. attach a load resistor of e.g. R=100 Ohm
+  2. measure the voltage U with a digital multi-meter
+  3. measure I_DVM (using the digital multi-meter) or calculate
+     `I_DVM = U/R`.
+  4. run `vameter.py -r -S test.rrd` for a couple of minutes
+  5. calculate `fac = I_avg/I_DVM`
+  6. replace `CONV_VALUE` in `/etc/vameter.conf` with `fac*0.185`.
+
+Note that `CONV_VALUE` also depends on the temperature, see the datasheet
+of the ACS712 for details. So in theory, you need to calibrate the
+module before using it. But since this is not a high-quality
+scientifc device, a one-time calibration for a typical setup should
+be fine.
 
 
 The database
