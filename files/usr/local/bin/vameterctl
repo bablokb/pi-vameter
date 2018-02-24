@@ -67,6 +67,6 @@ if [ -f "$BLINK_STATE" ]; then
   stop_blink
 else
   # program is not running, start it in the background
-  su - "$VAMETER_USER" -c "vameter.py -D /var/lib/vameter/data -g UIP -r" &
+  su - "$VAMETER_USER" -c "vameter.py -O none -D /var/lib/vameter/data -g UIP -r" &
   start_blink &
 fi
