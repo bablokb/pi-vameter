@@ -137,8 +137,8 @@ variables necessary to deal with sample variation and effects of the
 layout of the module:
 
   - `ADC`: the type of ADC you are using
-  - `U_CC_2': the Hall-senser should output this value for I = 0mA
-  - `CONV_VALUE': conversion-value of the Hall-sensor (see the datasheet)
+  - `U_CC_2`: the Hall-senser should output this value for I = 0mA
+  - `CONV_VALUE`: conversion-value of the Hall-sensor (see the datasheet)
 
 Sadly, every ADC-converter needs it's special read commands and you
 have to configure the data for the ADC you are using. The script
