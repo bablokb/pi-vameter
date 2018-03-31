@@ -69,6 +69,7 @@ ADC_RES    = 2**ADC_VALUES[ADC]['RESOLUTION']
 ADC_MASK   = 2**(ADC_VALUES[ADC]['RESOLUTION']-8) - 1
 
 TIMESTAMP_FMT = "%Y-%m-%d %H:%M:%S"
+DT_UNIX_0     = datetime.datetime.fromtimestamp(0)
 INTERVAL      = 1
 KEEP_SEC      = 1           # number of hours to keep seconds-data
 KEEP_MIN      = 24          # number of hours to keep minute-data
@@ -271,12 +272,17 @@ def convert_secs(secs):
 
 # --- display data   ---------------------------------------------------------
 
-def display_data(options,ts,u,i,p):
+def display_data(options,ts,ts_unix,u,i,p):
   """ display current data """
 
   global secs, u_max, i_max, p_max, p_sum
 
-  (h,m,s) = convert_secs(secs)
+  if options.ts_start == 0:
+    # we don't measure yet, so secs is all we have (and should be good enough)
+    (h,m,s) = convert_secs(secs)
+  else:
+    # calculate seconds since start
+    (h,m,s) = convert_secs(ts_unix-options.ts_start)
 
   # always try to write to the display
   try:
@@ -330,8 +336,8 @@ def display_data(options,ts,u,i,p):
 
     elif options.out_opt == "json":
       sys.stdout.write(
-          '{"ts": "%s", "U": "%.2f", "I": "%.1f", "P": "%.2f", ' %
-                         (ts.strftime("%s"),u,i,p) +
+          '{"ts": "%d", "U": "%.2f", "I": "%.1f", "P": "%.2f", ' %
+                         (ts_unix,u,i,p) +
                        '"U_max": "%.2f", "I_max": "%.1f", "P_max": "%.2f",' %
                          (u_max,i_max,p_max) +
                        ' "s_tot": "%02d:%02d:%02d", "P_tot": "%.2f"}\n' %
@@ -417,6 +423,7 @@ def save_and_display(options,ts,u_samp,ui_samp):
                               statistics.stdev(ui_samp,ui_raw))
 
   # convert values
+  ts_unix = int(round((ts-DT_UNIX_0).total_seconds()))  # datetime->unixtime
   if options.raw:
     (U,I,P) = (u_raw,ui_raw,0)
   elif options.voltage:
@@ -427,19 +434,19 @@ def save_and_display(options,ts,u_samp,ui_samp):
     options.logger.msg("TRACE", "converted data (U,I,P): %4.2f,%6.1f,%5.2f" % (U,I,P))
 
   # show current data
-  display_data(options,ts,U,I,P)
+  display_data(options,ts,ts_unix,U,I,P)
 
   # update database
   if I >= options.limit:
     if options.limit > 0:
       options.limit = 0  # once above the limit, record everything
     if not options.raw:
-      rrdtool.update(options.dbfile,"%s:%f:%f:%f" % (ts.strftime("%s"),U,I,P))
+      rrdtool.update(options.dbfile,"%d:%f:%f:%f" % (ts_unix,U,I,P))
 
     # save start timestamp, since rrdtool does not record it
     if options.ts_start == 0:
       options.logger.msg("INFO", "starting to update DB")
-      options.ts_start = int(ts.strftime("%s"))
+      options.ts_start = ts_unix
 
 # --- collect data   ---------------------------------------------------------
 
