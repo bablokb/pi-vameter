@@ -76,6 +76,7 @@ KEEP_MIN      = 24          # number of hours to keep minute-data
 KEEP_HOUR     = 1           # number of month to keep hour-data
 KEEP_DAY      = 12          # number of month to keep day-data
 
+U_MIN         = 0.5         # levels below indicate that the circuit has no power
 U_MAX         = 5.6         # max voltage (technically 5.5 with some headroom)
 A_MAX         = 5.0         # max current
 U_REF         = 3.3
@@ -253,6 +254,9 @@ def convert_data(u_raw,ui_raw,voltage=False):
     p = 0.0                 # not relevant
   else:
     i = max(0.0,(U_CC_2 - ui_raw*U_RES)/CONV_VALUE)*I_SCALE
+    if i > A_MAX*I_SCALE:
+      # ignore invalid high values
+      i = 0
     p = u*i/I_SCALE
 
   u_max  = max(u_max,u)
@@ -360,16 +364,16 @@ def collect_data(options):
   p_max = 0.0
   p_sum = 0.0
 
-  # sample accumulators
-  u_samp = []
-  ui_samp = []
-
   # start at (near) full second
   ms       = datetime.datetime.now().microsecond
   poll_int = (1000000 - ms)/1000000.0
   while True:
     if options.stop_event.wait(poll_int):
       break
+
+    # reset accumulators
+    u_samp  = []
+    ui_samp = []
 
     # read timestamp and values of voltage and current from ADC
     ts      = datetime.datetime.now()
@@ -382,16 +386,13 @@ def collect_data(options):
       ui_samp.append(read_spi(1,options))
       time.sleep(0.01)
       ts = datetime.datetime.now()
-    u_samp.append(read_spi(0,options))
-    ui_samp.append(read_spi(1,options))
 
     # save values
     options.logger.msg("DEBUG", "sample-size: %d" % len(u_samp))
-    save_and_display(options,ts,u_samp,ui_samp)
-
-    # reset accumulators
-    u_samp  = []
-    ui_samp = []
+    if not save_and_display(options,ts,u_samp,ui_samp):
+      # finish data-collection loop
+      os.kill(os.getpid(), signal.SIGINT)
+      return
 
     # set poll_int small enough so that we hit the next interval boundry
     ms = datetime.datetime.now().microsecond
@@ -400,7 +401,7 @@ def collect_data(options):
 # --- save and display data   ------------------------------------------------
 
 def save_and_display(options,ts,u_samp,ui_samp):
-  """ save and display data """
+  """ save and display data - returns False if data-collection should stop  """
 
   options.logger.msg("TRACE", "sample u_raw: %r" % (u_samp,))
   options.logger.msg("TRACE", "sample ui_raw: %r" % (ui_samp,))
@@ -436,6 +437,18 @@ def save_and_display(options,ts,u_samp,ui_samp):
   # show current data
   display_data(options,ts,ts_unix,U,I,P)
 
+  # if U is too low, the module isn't powered yet or not anymore
+  if not options.raw and U < U_MIN:
+    options.logger.msg("INFO", "low power detected")
+    if options.ts_start == 0:
+      # we haven't started yet, so just ignore measurement and continue
+      options.logger.msg("INFO", "waiting for power on")
+      return True
+    else:
+      # we lost power, so stop recording
+      options.logger.msg("INFO", "stopping on low power")
+      return False
+
   # update database
   if I >= options.limit:
     if options.limit > 0:
@@ -447,6 +460,7 @@ def save_and_display(options,ts,u_samp,ui_samp):
     if options.ts_start == 0:
       options.logger.msg("INFO", "starting to update DB")
       options.ts_start = ts_unix
+  return True
 
 # --- collect data   ---------------------------------------------------------
 
@@ -512,8 +526,10 @@ def sum_data(options):
     if options.ts_start > 0:
       first = options.ts_start
     else:
-      # this should not happen, unless somebody deleted to summary file
+      # either no data was collected or the summary file was deleted
+      options.logger.msg("WARN", "trying to recreate start timepoint")
       first = rrdtool.first(options.dbfile)
+      options.logger.msg("INFO", "estimated start is %r" % first)
     last  = rrdtool.last(options.dbfile)
   except Exception as e:
     options.logger.msg("TRACE", traceback.format_exc())
@@ -556,12 +572,15 @@ def sum_data(options):
     "P_max": float(info['print[5]']),
     "P_tot": round((last-first+1)*float(info['print[4]'])/3600,2)
     }
-  if options.voltage:
-    summary["I_avg"] = float(info['print[0]'])
-    summary["I_max"] = float(info['print[1]'])
-  else:
-    summary["I_avg"] = int(float(info['print[0]']))
-    summary["I_max"] = int(float(info['print[1]']))
+  try:
+    if options.voltage:
+      summary["I_avg"] = float(info['print[0]'])
+      summary["I_max"] = float(info['print[1]'])
+    else:
+      summary["I_avg"] = int(float(info['print[0]']))
+      summary["I_max"] = int(float(info['print[1]']))
+  except:
+    pass
 
   # write results to file
   f = open(sumfile,"w")
