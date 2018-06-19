@@ -205,6 +205,60 @@ def delete():
   bottle.response.status = 200                 # OK
   return '{"msg": ' + msg +'}'
 
+# --- rename entry   --------------------------------------------------------
+
+@route('/rename',method='POST')
+def rename():
+  """ delete data """
+
+  global options
+  # get name-parameter
+  name     = bottle.request.forms.get('name')
+  new_name = bottle.request.forms.get('new_name')
+
+  if options.debug:
+    print("DEBUG: processing rename from %s to %s" % (name,new_name))
+
+  bottle.response.content_type = 'application/json'
+
+  # check input parameters
+  if len(new_name) == 0:
+    if options.debug:
+      print("DEBUG: no new name specified")
+    msg = '"missing new name"'
+    bottle.response.status       = 400                 # bad request
+    return '{"msg": ' + msg +'}'
+
+  # find and rename all matching files
+  count = 0
+  for suffix in ['.rrd','.summary','.xml','-I.png','-U.png','-P.png']:
+    f_old = os.path.join(options.data_root[0],"%s%s" % (name,suffix))
+    f_new = os.path.join(options.data_root[0],"%s%s" % (new_name,suffix))
+    if options.debug:
+      print("DEBUG: checking %s" % f_old)
+    if os.path.exists(f_old):
+      count += 1
+      os.rename(f_old,f_new);
+      if options.debug:
+        print("DEBUG: renamed %s to %s" % (f_old,f_new))
+
+  # recreate img-files
+  args = [
+    os.path.join(options.pgm_dir,"vameter.py"),
+    "-D",
+    options.data_root[0],
+    "-g",
+    "UIP",
+    os.path.join(options.data_root[0],"%s.rrd" % new_name)
+    ]
+  subprocess.check_output(args)
+
+  # return number of deleted files
+  msg = '"renamed %d files"' % count
+  print "DEBUG: count: %d, msg: %s" % (count,msg)
+  bottle.response.status = 200                 # OK
+  return '{"msg": ' + msg +'}'
+
 # --- start data collection   -----------------------------------------------
 
 @route('/start',method='POST')
