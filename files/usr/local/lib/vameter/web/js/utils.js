@@ -56,6 +56,7 @@ doStart=function() {
     success: function(data){
       showMsg("Starting data-collection ...",2000);
       $('#Start').hide();
+      $('#btnRename').hide();
       $('#inpStart').val('');
       $('#btnStop').show();
       setup_SSE();
@@ -72,9 +73,42 @@ doStop=function() {
   $.post("/stop");
   showMsg("Stopping data-collection ...",3000);
   $('#Start').show();
+  $('#btnRename').show();
   $('#btnStop').hide();
   $('#Live').hide();
   setTimeout(function() { get_results();},3000);
+};
+
+/**
+  Handle rename start
+*/
+
+doRename=function() {
+  var new_name = $('#inpStart').val();
+  var name     = current_selection.name;
+  console.error("name: ",name);
+  console.error("new_name: ",new_name);
+   showMsg("Starting rename ...",2000);
+   $('#Start').hide();
+   $('#inpRename').hide();
+   $('#inpStart').val('');
+  $.ajax({
+    type: "POST",
+        data : {name:     name,
+                new_name: new_name},
+    cache: false,
+    url: "/rename",
+    success: function(data){
+      $('#Start').show();
+      $('#inpRename').show();
+      setTimeout(function() { get_results();},500);
+    },
+    fail: function(err) {
+      $('#Start').show();
+      $('#inpRename').show();
+      showMsg(err);
+    }
+  });
 };
 
 /**
