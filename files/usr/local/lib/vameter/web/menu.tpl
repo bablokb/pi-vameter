@@ -14,13 +14,16 @@
 
 <div class="w3-bar w3-border w3-card-4 w3-blue">
   <div id="Start">
-  <input id="inpStart" class="w3-bar-item w3-input" placeholder="name" />
-  <a id="btnStart" href="#" class="w3-bar-item w3-button w3-border-right
+    <input id="inpStart" class="w3-bar-item w3-input" placeholder="name" />
+    <a id="btnStart" href="#" class="w3-bar-item w3-button w3-border-right
                 w3-mobile w3-green" onclick="doStart()">Start</a>
   </div>
   <a id="btnStop" href="#" style="display:none"
      class="w3-bar-item w3-button w3-border-right
                  w3-mobile w3-red" onclick="doStop()">Stop</a>
+
+  <a id="btnRename" href="#" class="w3-bar-item w3-button w3-border-right
+                w3-mobile w3-yellow" onclick="doRename()">Rename</a>
 
   <a id="btnReboot" href="#" class="w3-bar-item w3-button w3-border-right
                  w3-mobile" onclick="doReboot()">Reboot</a>
