@@ -14,6 +14,8 @@
 
 <script  type="text/javascript">
 
+  var current_selection;
+
   get_results = function() {
     $.ajax({
       type: "POST",
@@ -98,6 +100,7 @@
       get_results();
       table.on('select', function(e,dt,type,indexes) {
         var data = table.rows(indexes).data();
+        current_selection = data[0];
         setTabData(data[0]);
       });
   });
