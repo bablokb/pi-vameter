@@ -14,7 +14,7 @@
 
 <script  type="text/javascript">
 
-  var current_selection;
+  var current_selection = null;
 
   get_results = function() {
     $.ajax({
@@ -22,6 +22,8 @@
       cache: false,
       url: "/results",
       success: function(data){
+        current_selection = null;
+        updateRenameButton();
         var table = $('#result_list').DataTable();
         table.clear();
         table.rows.add(data).draw();
@@ -102,6 +104,11 @@
         var data = table.rows(indexes).data();
         current_selection = data[0];
         setTabData(data[0]);
+        updateRenameButton();
+      });
+      table.on('deselect', function(e,dt,type,indexes) {
+        current_selection = null;
+        updateRenameButton();
       });
   });
 </script>
