@@ -29,7 +29,6 @@ setup_SSE=function() {
     var source = new EventSource('/update');
     source.addEventListener('message', function(e) {
       data = JSON.parse(e.data);
-      console.error(data);
       $("#I_act").text(data.I);
       $("#U_act").text(data.U);
       $("#P_act").text(data.P);
@@ -86,8 +85,6 @@ doStop=function() {
 doRename=function() {
   var new_name = $('#inpStart').val();
   var name     = current_selection.name;
-  console.error("name: ",name);
-  console.error("new_name: ",new_name);
    showMsg("Starting rename ...",2000);
    $('#Start').hide();
    $('#inpRename').hide();
@@ -103,7 +100,7 @@ doRename=function() {
       $('#inpRename').show();
       setTimeout(function() { get_results();},500);
     },
-    fail: function(err) {
+    error: function(err) {
       $('#Start').show();
       $('#inpRename').show();
       showMsg(err);
