@@ -15,14 +15,13 @@ try:
   import lcddriver
   have_spi = True
 except:
-  import math
   have_spi = False
 
 import os, sys, signal, signal, time, datetime, traceback
 import subprocess, syslog
 from argparse import ArgumentParser
 from threading import Thread, Event, Lock
-import json, rrdtool, statistics, ConfigParser
+import json, rrdtool, math, statistics, ConfigParser
 
 # --- read configuration-value   ---------------------------------------------
 
